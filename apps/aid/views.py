@@ -199,22 +199,29 @@ def my_requests(request):
 
 @login_required
 def request_create(request):
+    behalf = request.GET.get('on_behalf') == '1' and request.user.is_coordinator
     preferred = None
     if request.GET.get('item'):
         if not request.GET['item'].isascii() or not request.GET['item'].isdigit() or len(request.GET['item']) > 18:
             raise Http404
         preferred = get_object_or_404(Item, pk=request.GET['item'], status=Item.Status.AVAILABLE)
-    behalf = request.GET.get('on_behalf') == '1' and request.user.is_coordinator
+    if not preferred and not behalf:
+        messages.info(request, 'Выберите вещь в каталоге, чтобы отправить заявку.')
+        return redirect('catalog')
     initial = {'recipient_name': '' if behalf else request.user.display_name,
                'contact_phone': '' if behalf else request.user.phone, 'district': request.user.district}
     if preferred:
-        initial.update(category=preferred.category, need=f'Прошу рассмотреть возможность получения: {preferred.title}.')
+        initial.update(category=preferred.category, need=f'Хочу получить: {preferred.title}.')
     form = HelpRequestForm(request.POST or None, initial=initial)
     if preferred:
         form.fields['category'].disabled = True
-    return workflow_form(request, form=form, title='Зарегистрировать обращение' if behalf else 'Получить помощь',
-                         subtitle=f'Выбрана вещь: {preferred.title}. Решение и резерв подтвердит координатор.' if preferred else 'Опишите, что вам нужно. Обратиться можно и тогда, когда подходящей вещи пока нет в каталоге.',
-                         submit='Отправить обращение', operation=lambda: services.submit_request(request.user, form, preferred, behalf))
+        form.fields['need'].label = 'Комментарий к заявке'
+        form.fields['need'].help_text = 'Можно указать удобное время передачи или задать вопрос о вещи.'
+    return workflow_form(request, form=form, title='Записать обращение' if behalf else 'Заявка на вещь',
+                         subtitle=f'{preferred.title}. Укажите контакты, чтобы договориться о передаче.' if preferred else 'Запишите обращение человека, который связался с фондом.',
+                         submit='Сохранить обращение' if behalf else 'Отправить заявку',
+                         back_url=preferred.get_absolute_url() if preferred else 'workspace',
+                         operation=lambda: services.submit_request(request.user, form, preferred, behalf))
 
 
 @login_required
@@ -261,7 +268,7 @@ def request_reserve(request, pk):
         services.reserve(request.user, pk, item.pk, **values)
         return obj
     return workflow_form(request, form=form, title=f'Подобрать вещь: обращение №{pk}', back_url=obj.get_absolute_url(),
-                         subtitle='В списке только доступные вещи нужной категории. Система исключает одновременный резерв одной вещи.', operation=operation)
+                         subtitle='Выберите доступную вещь нужной категории и укажите срок резерва.', operation=operation)
 
 
 @coordinator_required

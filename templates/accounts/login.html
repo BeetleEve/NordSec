@@ -1,1 +1,26 @@
-{% extends 'base.html' %}{% block title %}Войти{% endblock %}{% block content %}<section class="container auth-page"><div class="auth-story"><span class="eyebrow">ДОБРО ПОЖАЛОВАТЬ В NORDSEC</span><h1>Добро начинается<br><span class="orange">с простых шагов.</span></h1><p>Войдите, чтобы предложить вещь, узнать решение по обращению или помочь с передачей.</p><div class="auth-quote"><span aria-hidden="true">♡</span><p>То, что больше не нужно одному,<br>может стать поддержкой другому.</p></div></div><form method="post" class="panel auth-form" data-submit-once>{% csrf_token %}<h2>Войти в аккаунт</h2><p class="muted">Рады видеть вас снова</p>{% include 'includes/fields.html' %}{% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}<button type="submit" class="button full-width">Войти →</button><p class="auth-switch">Пока нет аккаунта? <a href="{% url 'register' %}">Зарегистрироваться</a></p><p class="fine-print">Если забыли пароль, свяжитесь с координатором. В учебной версии нет внешней почтовой рассылки для восстановления.</p></form></section>{% endblock %}
+{% extends 'base.html' %}
+{% block title %}Войти{% endblock %}
+{% block content %}
+<section class="container auth-page">
+  <div class="auth-story">
+    <span class="eyebrow">NordSec</span>
+    <h1>Личный кабинет</h1>
+    <p>Предложения вещей, обращения и согласованные передачи.</p>
+    <ul class="auth-features">
+      <li>Добавляйте вещи и фотографии</li>
+      <li>Получайте ответы координатора</li>
+      <li>Следите за состоянием обращений</li>
+    </ul>
+  </div>
+  <form method="post" class="panel auth-form" data-submit-once>
+    {% csrf_token %}
+    <h2>Вход</h2>
+    <p class="muted">Укажите логин и пароль</p>
+    {% include 'includes/fields.html' %}
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+    <button type="submit" class="button full-width">Войти</button>
+    <p class="auth-switch">Нет аккаунта? <a href="{% url 'register' %}">Зарегистрироваться</a></p>
+    <p class="fine-print">Для восстановления доступа обратитесь к координатору.</p>
+  </form>
+</section>
+{% endblock %}

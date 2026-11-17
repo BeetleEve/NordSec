@@ -121,6 +121,8 @@ def withdraw_item(actor, item_id, reason):
 
 @transaction.atomic
 def submit_request(actor, form, preferred_item=None, on_behalf=False):
+    if not on_behalf and preferred_item is None:
+        raise ValidationError('Выберите вещь в каталоге, чтобы отправить заявку.')
     obj = form.save(commit=False)
     obj.registered_by = actor
     if on_behalf:
@@ -131,7 +133,7 @@ def submit_request(actor, form, preferred_item=None, on_behalf=False):
     if preferred_item:
         item = Item.objects.select_for_update().get(pk=preferred_item.pk)
         if item.status != Item.Status.AVAILABLE:
-            raise ValidationError('Вещь уже недоступна. Можно оставить общее обращение по категории.')
+            raise ValidationError('Вещь уже недоступна. Выберите другую вещь в каталоге.')
         if item.donor_id == actor.pk:
             raise ValidationError('Нельзя подать обращение на собственную вещь.')
         obj.preferred_item = item

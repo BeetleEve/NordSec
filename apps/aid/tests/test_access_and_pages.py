@@ -24,13 +24,14 @@ class AccessAndPageTests(AidCase):
 
     def test_coordinator_pages_render(self):
         self.client.force_login(self.coordinator)
-        for name in ['dashboard','workspace','reports','audit_log','task_list','item_create','request_create','profile']:
+        for name in ['dashboard','workspace','reports','audit_log','task_list','item_create','profile']:
             with self.subTest(name=name):
                 self.assertEqual(self.client.get(reverse(name)).status_code,200)
+        self.assertEqual(self.client.get(reverse('request_create'), {'on_behalf': '1'}).status_code, 200)
 
     def test_member_pages_render(self):
         self.client.force_login(self.recipient)
-        for name in ['dashboard','my_items','my_requests','favorites','notifications','profile','item_create','request_create','volunteer_apply']:
+        for name in ['dashboard','my_items','my_requests','favorites','notifications','profile','item_create','volunteer_apply']:
             with self.subTest(name=name):
                 self.assertEqual(self.client.get(reverse(name)).status_code,200)
 
