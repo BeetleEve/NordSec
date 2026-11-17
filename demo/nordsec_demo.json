@@ -1,0 +1,1142 @@
+[
+{
+  "model": "accounts.user",
+  "pk": 1,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$pV1JbHWSxkAYxMva113Dxs$olRM16MT+atu+wn5gFdJSkipqONRdZo2zmyzzhJRcuw=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "coordinator",
+    "first_name": "Анна",
+    "last_name": "Координатор",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-11-17T11:21:39.664Z",
+    "role": "coordinator",
+    "phone": "+7 900 000-00-01",
+    "district": "central",
+    "consent_at": "2026-11-17T11:21:39.664Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 2,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$O7XOx0OQowJtP9FOyASf6k$Z3SiXGGQs1b7/yEMrJ53QpTkf7IBZ9ptRUb47hg+qbE=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "volunteer",
+    "first_name": "Михаил",
+    "last_name": "Волонтёр",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-11-17T11:21:39.926Z",
+    "role": "volunteer",
+    "phone": "+7 900 000-00-02",
+    "district": "central",
+    "consent_at": "2026-11-17T11:21:39.926Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 3,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$NuipULW3vRYCtW4FMWZqe3$rh1tqSZvaeGR4cHaNqmTSKXVGg7Fr0x/JMIn3nKL2nQ=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "donor",
+    "first_name": "Елена",
+    "last_name": "Жертвователь",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-11-17T11:21:40.185Z",
+    "role": "member",
+    "phone": "+7 900 000-00-03",
+    "district": "central",
+    "consent_at": "2026-11-17T11:21:40.185Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 4,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$9AfkLSz9A0ZrYtqOCDUR8P$XUi8EoVX3kjNjOdLKxzAwQvAQDsSajAtBpIsLVjHxMs=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "recipient",
+    "first_name": "Мария",
+    "last_name": "Получатель",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-11-17T11:21:40.445Z",
+    "role": "member",
+    "phone": "+7 900 000-00-04",
+    "district": "central",
+    "consent_at": "2026-11-17T11:21:40.445Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "aid.category",
+  "pk": 1,
+  "fields": {
+    "name": "Одежда и обувь",
+    "slug": "clothes",
+    "illustration": "clothes",
+    "order": 0
+  }
+},
+{
+  "model": "aid.category",
+  "pk": 2,
+  "fields": {
+    "name": "Детские вещи",
+    "slug": "children",
+    "illustration": "children",
+    "order": 1
+  }
+},
+{
+  "model": "aid.category",
+  "pk": 3,
+  "fields": {
+    "name": "Для дома",
+    "slug": "home",
+    "illustration": "home",
+    "order": 2
+  }
+},
+{
+  "model": "aid.category",
+  "pk": 4,
+  "fields": {
+    "name": "Мебель",
+    "slug": "furniture",
+    "illustration": "furniture",
+    "order": 3
+  }
+},
+{
+  "model": "aid.category",
+  "pk": 5,
+  "fields": {
+    "name": "Книги",
+    "slug": "books",
+    "illustration": "books",
+    "order": 4
+  }
+},
+{
+  "model": "aid.category",
+  "pk": 6,
+  "fields": {
+    "name": "Другое",
+    "slug": "other",
+    "illustration": "other",
+    "order": 5
+  }
+},
+{
+  "model": "aid.item",
+  "pk": 1,
+  "fields": {
+    "created_at": "2026-11-17T11:21:40.706Z",
+    "updated_at": "2026-11-17T11:21:40.706Z",
+    "donor": 3,
+    "registered_by": 3,
+    "donor_name": "Елена Жертвователь",
+    "contact_phone": "+7 900 000-00-03",
+    "title": "Зимняя куртка",
+    "category": 1,
+    "description": "Тёплая куртка без повреждений. Чистая, молнии и кнопки исправны.",
+    "condition": "excellent",
+    "size": "Размер M",
+    "district": "central",
+    "pickup_address": "Демонстрационный адрес, дом 1",
+    "location": "donor",
+    "status": "available",
+    "photo": "",
+    "needs_transport": false,
+    "review_reason": "",
+    "reviewed_by": 1,
+    "reviewed_at": "2026-11-17T11:21:40.705Z",
+    "accepted_at": "2026-11-17T11:21:40.705Z"
+  }
+},
+{
+  "model": "aid.item",
+  "pk": 2,
+  "fields": {
+    "created_at": "2026-11-17T11:21:40.712Z",
+    "updated_at": "2026-11-17T11:21:40.773Z",
+    "donor": 3,
+    "registered_by": 3,
+    "donor_name": "Елена Жертвователь",
+    "contact_phone": "+7 900 000-00-03",
+    "title": "Плюшевый медведь",
+    "category": 2,
+    "description": "Мягкая игрушка. После стирки, без повреждений.",
+    "condition": "excellent",
+    "size": "35 см",
+    "district": "talnakh",
+    "pickup_address": "Демонстрационный адрес, дом 1",
+    "location": "donor",
+    "status": "reserved",
+    "photo": "",
+    "needs_transport": false,
+    "review_reason": "",
+    "reviewed_by": 1,
+    "reviewed_at": "2026-11-17T11:21:40.711Z",
+    "accepted_at": "2026-11-17T11:21:40.711Z"
+  }
+},
+{
+  "model": "aid.item",
+  "pk": 3,
+  "fields": {
+    "created_at": "2026-11-17T11:21:40.713Z",
+    "updated_at": "2026-11-17T11:21:40.797Z",
+    "donor": 3,
+    "registered_by": 3,
+    "donor_name": "Елена Жертвователь",
+    "contact_phone": "+7 900 000-00-03",
+    "title": "Набор кружек",
+    "category": 3,
+    "description": "Четыре одинаковые керамические кружки. Передаются одним неделимым комплектом.",
+    "condition": "new",
+    "size": "Комплект из 4 шт.",
+    "district": "central",
+    "pickup_address": "Демонстрационный адрес, дом 1",
+    "location": "recipient",
+    "status": "delivered",
+    "photo": "",
+    "needs_transport": false,
+    "review_reason": "",
+    "reviewed_by": 1,
+    "reviewed_at": "2026-11-17T11:21:40.713Z",
+    "accepted_at": "2026-11-17T11:21:40.713Z"
+  }
+},
+{
+  "model": "aid.item",
+  "pk": 4,
+  "fields": {
+    "created_at": "2026-11-17T11:21:40.714Z",
+    "updated_at": "2026-11-17T11:21:40.714Z",
+    "donor": 3,
+    "registered_by": 3,
+    "donor_name": "Елена Жертвователь",
+    "contact_phone": "+7 900 000-00-03",
+    "title": "Деревянный стул",
+    "category": 4,
+    "description": "Устойчивый деревянный стул. Небольшие следы использования, крепления исправны.",
+    "condition": "good",
+    "size": "45 × 45 × 85 см",
+    "district": "kayerkan",
+    "pickup_address": "Демонстрационный адрес, дом 1",
+    "location": "donor",
+    "status": "available",
+    "photo": "",
+    "needs_transport": true,
+    "review_reason": "",
+    "reviewed_by": 1,
+    "reviewed_at": "2026-11-17T11:21:40.714Z",
+    "accepted_at": "2026-11-17T11:21:40.714Z"
+  }
+},
+{
+  "model": "aid.item",
+  "pk": 5,
+  "fields": {
+    "created_at": "2026-11-17T11:21:40.715Z",
+    "updated_at": "2026-11-17T11:21:40.715Z",
+    "donor": 3,
+    "registered_by": 3,
+    "donor_name": "Елена Жертвователь",
+    "contact_phone": "+7 900 000-00-03",
+    "title": "Детские книги",
+    "category": 5,
+    "description": "Книги с рассказами и иллюстрациями. Передаются одним комплектом.",
+    "condition": "good",
+    "size": "Набор для 6–8 лет",
+    "district": "oganer",
+    "pickup_address": "Демонстрационный адрес, дом 1",
+    "location": "donor",
+    "status": "available",
+    "photo": "",
+    "needs_transport": false,
+    "review_reason": "",
+    "reviewed_by": 1,
+    "reviewed_at": "2026-11-17T11:21:40.715Z",
+    "accepted_at": "2026-11-17T11:21:40.715Z"
+  }
+},
+{
+  "model": "aid.item",
+  "pk": 6,
+  "fields": {
+    "created_at": "2026-11-17T11:21:40.716Z",
+    "updated_at": "2026-11-17T11:21:40.716Z",
+    "donor": 3,
+    "registered_by": 3,
+    "donor_name": "Елена Жертвователь",
+    "contact_phone": "+7 900 000-00-03",
+    "title": "Коробка для хранения",
+    "category": 6,
+    "description": "Прочная коробка с крышкой, без повреждений.",
+    "condition": "excellent",
+    "size": "40 × 30 см",
+    "district": "central",
+    "pickup_address": "Демонстрационный адрес, дом 1",
+    "location": "donor",
+    "status": "available",
+    "photo": "",
+    "needs_transport": false,
+    "review_reason": "",
+    "reviewed_by": 1,
+    "reviewed_at": "2026-11-17T11:21:40.716Z",
+    "accepted_at": "2026-11-17T11:21:40.716Z"
+  }
+},
+{
+  "model": "aid.item",
+  "pk": 7,
+  "fields": {
+    "created_at": "2026-11-17T11:21:40.718Z",
+    "updated_at": "2026-11-17T11:21:40.718Z",
+    "donor": 3,
+    "registered_by": 3,
+    "donor_name": "Елена Жертвователь",
+    "contact_phone": "+7 900 000-00-03",
+    "title": "Тёплый свитер",
+    "category": 1,
+    "description": "Мягкий свитер, без пятен и дыр. Выстиран.",
+    "condition": "good",
+    "size": "Размер L",
+    "district": "talnakh",
+    "pickup_address": "Демонстрационный адрес, дом 1",
+    "location": "donor",
+    "status": "available",
+    "photo": "",
+    "needs_transport": false,
+    "review_reason": "",
+    "reviewed_by": 1,
+    "reviewed_at": "2026-11-17T11:21:40.717Z",
+    "accepted_at": "2026-11-17T11:21:40.717Z"
+  }
+},
+{
+  "model": "aid.item",
+  "pk": 8,
+  "fields": {
+    "created_at": "2026-11-17T11:21:40.719Z",
+    "updated_at": "2026-11-17T11:21:40.719Z",
+    "donor": 3,
+    "registered_by": 3,
+    "donor_name": "Елена Жертвователь",
+    "contact_phone": "+7 900 000-00-03",
+    "title": "Детский конструктор",
+    "category": 2,
+    "description": "Крупные детали в коробке. Острые и повреждённые детали отсутствуют.",
+    "condition": "good",
+    "size": "Возраст 5+",
+    "district": "central",
+    "pickup_address": "Демонстрационный адрес, дом 1",
+    "location": "donor",
+    "status": "available",
+    "photo": "",
+    "needs_transport": false,
+    "review_reason": "",
+    "reviewed_by": 1,
+    "reviewed_at": "2026-11-17T11:21:40.718Z",
+    "accepted_at": "2026-11-17T11:21:40.718Z"
+  }
+},
+{
+  "model": "aid.item",
+  "pk": 9,
+  "fields": {
+    "created_at": "2026-11-17T11:21:40.720Z",
+    "updated_at": "2026-11-17T11:21:40.720Z",
+    "donor": 3,
+    "registered_by": 3,
+    "donor_name": "Елена Жертвователь",
+    "contact_phone": "+7 900 000-00-03",
+    "title": "Книги для школьника",
+    "category": 5,
+    "description": "Художественные книги для школьного чтения, комплект неделимый.",
+    "condition": "excellent",
+    "size": "Комплект из 3 книг",
+    "district": "kayerkan",
+    "pickup_address": "Демонстрационный адрес, дом 1",
+    "location": "donor",
+    "status": "available",
+    "photo": "",
+    "needs_transport": false,
+    "review_reason": "",
+    "reviewed_by": 1,
+    "reviewed_at": "2026-11-17T11:21:40.719Z",
+    "accepted_at": "2026-11-17T11:21:40.719Z"
+  }
+},
+{
+  "model": "aid.item",
+  "pk": 10,
+  "fields": {
+    "created_at": "2026-11-17T11:21:40.721Z",
+    "updated_at": "2026-11-17T11:21:40.721Z",
+    "donor": 3,
+    "registered_by": 3,
+    "donor_name": "Елена Жертвователь",
+    "contact_phone": "+7 900 000-00-03",
+    "title": "Небольшая тумба",
+    "category": 4,
+    "description": "Тумба с одной полкой. Нужна помощь с переносом.",
+    "condition": "good",
+    "size": "40 × 35 × 50 см",
+    "district": "central",
+    "pickup_address": "Демонстрационный адрес, дом 1",
+    "location": "donor",
+    "status": "available",
+    "photo": "",
+    "needs_transport": true,
+    "review_reason": "",
+    "reviewed_by": 1,
+    "reviewed_at": "2026-11-17T11:21:40.720Z",
+    "accepted_at": "2026-11-17T11:21:40.720Z"
+  }
+},
+{
+  "model": "aid.item",
+  "pk": 11,
+  "fields": {
+    "created_at": "2026-11-17T11:21:40.722Z",
+    "updated_at": "2026-11-17T11:21:40.722Z",
+    "donor": 3,
+    "registered_by": 3,
+    "donor_name": "Елена Жертвователь",
+    "contact_phone": "+7 900 000-00-03",
+    "title": "Настольная игра",
+    "category": 2,
+    "description": "Настольная игра, все детали на месте.",
+    "condition": "excellent",
+    "size": "Возраст 8+",
+    "district": "oganer",
+    "pickup_address": "Демонстрационный адрес, дом 1",
+    "location": "donor",
+    "status": "available",
+    "photo": "",
+    "needs_transport": false,
+    "review_reason": "",
+    "reviewed_by": 1,
+    "reviewed_at": "2026-11-17T11:21:40.722Z",
+    "accepted_at": "2026-11-17T11:21:40.722Z"
+  }
+},
+{
+  "model": "aid.item",
+  "pk": 12,
+  "fields": {
+    "created_at": "2026-11-17T11:21:40.724Z",
+    "updated_at": "2026-11-17T11:21:40.724Z",
+    "donor": 3,
+    "registered_by": 3,
+    "donor_name": "Елена Жертвователь",
+    "contact_phone": "+7 900 000-00-03",
+    "title": "Набор кухонных мисок",
+    "category": 3,
+    "description": "Миски из нержавеющей стали. Передаются комплектом.",
+    "condition": "new",
+    "size": "Комплект из 3 шт.",
+    "district": "talnakh",
+    "pickup_address": "Демонстрационный адрес, дом 1",
+    "location": "donor",
+    "status": "available",
+    "photo": "",
+    "needs_transport": false,
+    "review_reason": "",
+    "reviewed_by": 1,
+    "reviewed_at": "2026-11-17T11:21:40.723Z",
+    "accepted_at": "2026-11-17T11:21:40.723Z"
+  }
+},
+{
+  "model": "aid.item",
+  "pk": 13,
+  "fields": {
+    "created_at": "2026-11-17T11:21:40.725Z",
+    "updated_at": "2026-11-17T11:21:40.725Z",
+    "donor": 3,
+    "registered_by": 3,
+    "donor_name": "Елена Жертвователь",
+    "contact_phone": "+7 900 000-00-03",
+    "title": "Школьный рюкзак",
+    "category": 2,
+    "description": "Нужно проверить предложение жертвователя.",
+    "condition": "good",
+    "size": "",
+    "district": "central",
+    "pickup_address": "Демонстрационный адрес, дом 1",
+    "location": "donor",
+    "status": "review",
+    "photo": "",
+    "needs_transport": false,
+    "review_reason": "",
+    "reviewed_by": null,
+    "reviewed_at": null,
+    "accepted_at": null
+  }
+},
+{
+  "model": "aid.helprequest",
+  "pk": 1,
+  "fields": {
+    "created_at": "2026-11-17T11:21:40.725Z",
+    "updated_at": "2026-11-17T11:21:40.725Z",
+    "recipient": 4,
+    "registered_by": 4,
+    "recipient_name": "Мария Получатель",
+    "contact_phone": "+7 900 000-00-04",
+    "preferred_item": 1,
+    "category": 1,
+    "need": "Нужна вещь: Зимняя куртка. Вымышленное демонстрационное обращение.",
+    "district": "central",
+    "delivery_address": "Демонстрационный адрес, дом 2",
+    "needs_delivery": true,
+    "status": "new",
+    "coordinator": null,
+    "decision_reason": "",
+    "staff_note": ""
+  }
+},
+{
+  "model": "aid.helprequest",
+  "pk": 2,
+  "fields": {
+    "created_at": "2026-11-17T11:21:40.727Z",
+    "updated_at": "2026-11-17T11:21:40.773Z",
+    "recipient": 4,
+    "registered_by": 4,
+    "recipient_name": "Мария Получатель",
+    "contact_phone": "+7 900 000-00-04",
+    "preferred_item": 2,
+    "category": 2,
+    "need": "Нужна вещь: Плюшевый медведь. Вымышленное демонстрационное обращение.",
+    "district": "central",
+    "delivery_address": "Демонстрационный адрес, дом 2",
+    "needs_delivery": true,
+    "status": "reserved",
+    "coordinator": 1,
+    "decision_reason": "Можно подобрать вещь.",
+    "staff_note": ""
+  }
+},
+{
+  "model": "aid.helprequest",
+  "pk": 3,
+  "fields": {
+    "created_at": "2026-11-17T11:21:40.780Z",
+    "updated_at": "2026-11-17T11:21:40.798Z",
+    "recipient": 4,
+    "registered_by": 4,
+    "recipient_name": "Мария Получатель",
+    "contact_phone": "+7 900 000-00-04",
+    "preferred_item": 3,
+    "category": 3,
+    "need": "Нужна вещь: Набор кружек. Вымышленное демонстрационное обращение.",
+    "district": "central",
+    "delivery_address": "Демонстрационный адрес, дом 2",
+    "needs_delivery": true,
+    "status": "completed",
+    "coordinator": 1,
+    "decision_reason": "",
+    "staff_note": ""
+  }
+},
+{
+  "model": "aid.reservation",
+  "pk": 1,
+  "fields": {
+    "created_at": "2026-11-17T11:21:40.771Z",
+    "updated_at": "2026-11-17T11:21:40.771Z",
+    "item": 2,
+    "request": 2,
+    "created_by": 1,
+    "status": "active",
+    "expires_at": "2026-11-20T11:21:40.766Z",
+    "meeting_at": "2026-11-18T11:21:40.766Z",
+    "meeting_note": "Время подтверждается координатором.",
+    "cancellation_reason": "",
+    "overdue_notified": false
+  }
+},
+{
+  "model": "aid.reservation",
+  "pk": 2,
+  "fields": {
+    "created_at": "2026-11-17T11:21:40.786Z",
+    "updated_at": "2026-11-17T11:21:40.796Z",
+    "item": 3,
+    "request": 3,
+    "created_by": 1,
+    "status": "fulfilled",
+    "expires_at": "2026-11-18T11:21:40.783Z",
+    "meeting_at": null,
+    "meeting_note": "",
+    "cancellation_reason": "",
+    "overdue_notified": false
+  }
+},
+{
+  "model": "aid.volunteertask",
+  "pk": 1,
+  "fields": {
+    "created_at": "2026-11-17T11:21:40.777Z",
+    "updated_at": "2026-11-17T11:21:40.777Z",
+    "reservation": 1,
+    "volunteer": null,
+    "title": "Передать игрушку получателю",
+    "description": "Забрать мягкую игрушку и передать получателю. Небольшая сумка.",
+    "district": "central",
+    "pickup_address": "Демонстрационный адрес, дом 1",
+    "dropoff_address": "Демонстрационный адрес, дом 2",
+    "scheduled_at": "2026-11-18T11:21:40.776Z",
+    "status": "open",
+    "result_note": ""
+  }
+},
+{
+  "model": "aid.transfer",
+  "pk": 1,
+  "fields": {
+    "reservation": 2,
+    "confirmed_by": 1,
+    "transferred_at": "2026-11-17T11:21:40.790Z",
+    "created_at": "2026-11-17T11:21:40.794Z",
+    "confirmation_note": "Вымышленная передача для демонстрации отчёта.",
+    "reversed_at": null,
+    "reversed_by": null,
+    "reversal_reason": ""
+  }
+},
+{
+  "model": "aid.notification",
+  "pk": 1,
+  "fields": {
+    "recipient": 4,
+    "title": "Обновление обращения",
+    "message": "№2: Одобрено. Можно подобрать вещь.",
+    "url": "/requests/2/",
+    "created_at": "2026-11-17T11:21:40.764Z",
+    "read_at": null
+  }
+},
+{
+  "model": "aid.notification",
+  "pk": 2,
+  "fields": {
+    "recipient": 4,
+    "title": "Вещь зарезервирована для вас",
+    "message": "Плюшевый медведь. Время подтверждается координатором.",
+    "url": "/requests/2/",
+    "created_at": "2026-11-17T11:21:40.775Z",
+    "read_at": null
+  }
+},
+{
+  "model": "aid.notification",
+  "pk": 3,
+  "fields": {
+    "recipient": 3,
+    "title": "Согласуется передача вещи",
+    "message": "Плюшевый медведь",
+    "url": "/items/2/",
+    "created_at": "2026-11-17T11:21:40.776Z",
+    "read_at": null
+  }
+},
+{
+  "model": "aid.notification",
+  "pk": 4,
+  "fields": {
+    "recipient": 4,
+    "title": "Обновление обращения",
+    "message": "№3: Одобрено. ",
+    "url": "/requests/3/",
+    "created_at": "2026-11-17T11:21:40.783Z",
+    "read_at": null
+  }
+},
+{
+  "model": "aid.notification",
+  "pk": 5,
+  "fields": {
+    "recipient": 4,
+    "title": "Вещь зарезервирована для вас",
+    "message": "Набор кружек. ",
+    "url": "/requests/3/",
+    "created_at": "2026-11-17T11:21:40.789Z",
+    "read_at": null
+  }
+},
+{
+  "model": "aid.notification",
+  "pk": 6,
+  "fields": {
+    "recipient": 3,
+    "title": "Согласуется передача вещи",
+    "message": "Набор кружек",
+    "url": "/items/3/",
+    "created_at": "2026-11-17T11:21:40.789Z",
+    "read_at": null
+  }
+},
+{
+  "model": "aid.notification",
+  "pk": 7,
+  "fields": {
+    "recipient": 4,
+    "title": "Получение помощи подтверждено",
+    "message": "Набор кружек",
+    "url": "/requests/3/",
+    "created_at": "2026-11-17T11:21:40.800Z",
+    "read_at": null
+  }
+},
+{
+  "model": "aid.notification",
+  "pk": 8,
+  "fields": {
+    "recipient": 3,
+    "title": "Ваша вещь передана",
+    "message": "Набор кружек",
+    "url": "/items/3/",
+    "created_at": "2026-11-17T11:21:40.800Z",
+    "read_at": null
+  }
+},
+{
+  "model": "aid.auditlog",
+  "pk": 1,
+  "fields": {
+    "actor": 1,
+    "entity": "item",
+    "object_id": 1,
+    "action": "Демонстрационная вещь принята на учёт",
+    "before": {},
+    "after": {
+      "status": "available",
+      "location": "donor"
+    },
+    "note": "",
+    "created_at": "2026-11-17T11:21:40.708Z"
+  }
+},
+{
+  "model": "aid.auditlog",
+  "pk": 2,
+  "fields": {
+    "actor": 1,
+    "entity": "item",
+    "object_id": 2,
+    "action": "Демонстрационная вещь принята на учёт",
+    "before": {},
+    "after": {
+      "status": "available",
+      "location": "donor"
+    },
+    "note": "",
+    "created_at": "2026-11-17T11:21:40.712Z"
+  }
+},
+{
+  "model": "aid.auditlog",
+  "pk": 3,
+  "fields": {
+    "actor": 1,
+    "entity": "item",
+    "object_id": 3,
+    "action": "Демонстрационная вещь принята на учёт",
+    "before": {},
+    "after": {
+      "status": "available",
+      "location": "donor"
+    },
+    "note": "",
+    "created_at": "2026-11-17T11:21:40.714Z"
+  }
+},
+{
+  "model": "aid.auditlog",
+  "pk": 4,
+  "fields": {
+    "actor": 1,
+    "entity": "item",
+    "object_id": 4,
+    "action": "Демонстрационная вещь принята на учёт",
+    "before": {},
+    "after": {
+      "status": "available",
+      "location": "donor"
+    },
+    "note": "",
+    "created_at": "2026-11-17T11:21:40.715Z"
+  }
+},
+{
+  "model": "aid.auditlog",
+  "pk": 5,
+  "fields": {
+    "actor": 1,
+    "entity": "item",
+    "object_id": 5,
+    "action": "Демонстрационная вещь принята на учёт",
+    "before": {},
+    "after": {
+      "status": "available",
+      "location": "donor"
+    },
+    "note": "",
+    "created_at": "2026-11-17T11:21:40.716Z"
+  }
+},
+{
+  "model": "aid.auditlog",
+  "pk": 6,
+  "fields": {
+    "actor": 1,
+    "entity": "item",
+    "object_id": 6,
+    "action": "Демонстрационная вещь принята на учёт",
+    "before": {},
+    "after": {
+      "status": "available",
+      "location": "donor"
+    },
+    "note": "",
+    "created_at": "2026-11-17T11:21:40.717Z"
+  }
+},
+{
+  "model": "aid.auditlog",
+  "pk": 7,
+  "fields": {
+    "actor": 1,
+    "entity": "item",
+    "object_id": 7,
+    "action": "Демонстрационная вещь принята на учёт",
+    "before": {},
+    "after": {
+      "status": "available",
+      "location": "donor"
+    },
+    "note": "",
+    "created_at": "2026-11-17T11:21:40.718Z"
+  }
+},
+{
+  "model": "aid.auditlog",
+  "pk": 8,
+  "fields": {
+    "actor": 1,
+    "entity": "item",
+    "object_id": 8,
+    "action": "Демонстрационная вещь принята на учёт",
+    "before": {},
+    "after": {
+      "status": "available",
+      "location": "donor"
+    },
+    "note": "",
+    "created_at": "2026-11-17T11:21:40.719Z"
+  }
+},
+{
+  "model": "aid.auditlog",
+  "pk": 9,
+  "fields": {
+    "actor": 1,
+    "entity": "item",
+    "object_id": 9,
+    "action": "Демонстрационная вещь принята на учёт",
+    "before": {},
+    "after": {
+      "status": "available",
+      "location": "donor"
+    },
+    "note": "",
+    "created_at": "2026-11-17T11:21:40.720Z"
+  }
+},
+{
+  "model": "aid.auditlog",
+  "pk": 10,
+  "fields": {
+    "actor": 1,
+    "entity": "item",
+    "object_id": 10,
+    "action": "Демонстрационная вещь принята на учёт",
+    "before": {},
+    "after": {
+      "status": "available",
+      "location": "donor"
+    },
+    "note": "",
+    "created_at": "2026-11-17T11:21:40.721Z"
+  }
+},
+{
+  "model": "aid.auditlog",
+  "pk": 11,
+  "fields": {
+    "actor": 1,
+    "entity": "item",
+    "object_id": 11,
+    "action": "Демонстрационная вещь принята на учёт",
+    "before": {},
+    "after": {
+      "status": "available",
+      "location": "donor"
+    },
+    "note": "",
+    "created_at": "2026-11-17T11:21:40.723Z"
+  }
+},
+{
+  "model": "aid.auditlog",
+  "pk": 12,
+  "fields": {
+    "actor": 1,
+    "entity": "item",
+    "object_id": 12,
+    "action": "Демонстрационная вещь принята на учёт",
+    "before": {},
+    "after": {
+      "status": "available",
+      "location": "donor"
+    },
+    "note": "",
+    "created_at": "2026-11-17T11:21:40.724Z"
+  }
+},
+{
+  "model": "aid.auditlog",
+  "pk": 13,
+  "fields": {
+    "actor": 4,
+    "entity": "helprequest",
+    "object_id": 1,
+    "action": "Демонстрационное обращение создано",
+    "before": {},
+    "after": {
+      "status": "new"
+    },
+    "note": "",
+    "created_at": "2026-11-17T11:21:40.726Z"
+  }
+},
+{
+  "model": "aid.auditlog",
+  "pk": 14,
+  "fields": {
+    "actor": 4,
+    "entity": "helprequest",
+    "object_id": 2,
+    "action": "Демонстрационное обращение создано",
+    "before": {},
+    "after": {
+      "status": "new"
+    },
+    "note": "",
+    "created_at": "2026-11-17T11:21:40.727Z"
+  }
+},
+{
+  "model": "aid.auditlog",
+  "pk": 15,
+  "fields": {
+    "actor": 1,
+    "entity": "helprequest",
+    "object_id": 2,
+    "action": "Решение по обращению",
+    "before": {
+      "status": "new"
+    },
+    "after": {
+      "status": "approved"
+    },
+    "note": "Можно подобрать вещь.",
+    "created_at": "2026-11-17T11:21:40.730Z"
+  }
+},
+{
+  "model": "aid.auditlog",
+  "pk": 16,
+  "fields": {
+    "actor": 1,
+    "entity": "item",
+    "object_id": 2,
+    "action": "Создан резерв",
+    "before": {
+      "status": "available"
+    },
+    "after": {
+      "status": "reserved",
+      "location": "donor"
+    },
+    "note": "Обращение №2",
+    "created_at": "2026-11-17T11:21:40.774Z"
+  }
+},
+{
+  "model": "aid.auditlog",
+  "pk": 17,
+  "fields": {
+    "actor": 1,
+    "entity": "helprequest",
+    "object_id": 2,
+    "action": "Создан резерв",
+    "before": {
+      "status": "approved"
+    },
+    "after": {
+      "status": "reserved"
+    },
+    "note": "Вещь №2",
+    "created_at": "2026-11-17T11:21:40.774Z"
+  }
+},
+{
+  "model": "aid.auditlog",
+  "pk": 18,
+  "fields": {
+    "actor": 4,
+    "entity": "helprequest",
+    "object_id": 3,
+    "action": "Демонстрационное обращение создано",
+    "before": {},
+    "after": {
+      "status": "new"
+    },
+    "note": "",
+    "created_at": "2026-11-17T11:21:40.780Z"
+  }
+},
+{
+  "model": "aid.auditlog",
+  "pk": 19,
+  "fields": {
+    "actor": 1,
+    "entity": "helprequest",
+    "object_id": 3,
+    "action": "Решение по обращению",
+    "before": {
+      "status": "new"
+    },
+    "after": {
+      "status": "approved"
+    },
+    "note": "",
+    "created_at": "2026-11-17T11:21:40.782Z"
+  }
+},
+{
+  "model": "aid.auditlog",
+  "pk": 20,
+  "fields": {
+    "actor": 1,
+    "entity": "item",
+    "object_id": 3,
+    "action": "Создан резерв",
+    "before": {
+      "status": "available"
+    },
+    "after": {
+      "status": "reserved",
+      "location": "donor"
+    },
+    "note": "Обращение №3",
+    "created_at": "2026-11-17T11:21:40.787Z"
+  }
+},
+{
+  "model": "aid.auditlog",
+  "pk": 21,
+  "fields": {
+    "actor": 1,
+    "entity": "helprequest",
+    "object_id": 3,
+    "action": "Создан резерв",
+    "before": {
+      "status": "approved"
+    },
+    "after": {
+      "status": "reserved"
+    },
+    "note": "Вещь №3",
+    "created_at": "2026-11-17T11:21:40.788Z"
+  }
+},
+{
+  "model": "aid.auditlog",
+  "pk": 22,
+  "fields": {
+    "actor": 1,
+    "entity": "item",
+    "object_id": 3,
+    "action": "Передача подтверждена",
+    "before": {
+      "status": "reserved"
+    },
+    "after": {
+      "status": "delivered",
+      "location": "recipient"
+    },
+    "note": "Вымышленная передача для демонстрации отчёта.",
+    "created_at": "2026-11-17T11:21:40.798Z"
+  }
+},
+{
+  "model": "aid.auditlog",
+  "pk": 23,
+  "fields": {
+    "actor": 1,
+    "entity": "helprequest",
+    "object_id": 3,
+    "action": "Помощь предоставлена",
+    "before": {
+      "status": "reserved"
+    },
+    "after": {
+      "status": "completed"
+    },
+    "note": "Вымышленная передача для демонстрации отчёта.",
+    "created_at": "2026-11-17T11:21:40.798Z"
+  }
+},
+{
+  "model": "aid.auditlog",
+  "pk": 24,
+  "fields": {
+    "actor": 1,
+    "entity": "transfer",
+    "object_id": 1,
+    "action": "Создана запись передачи",
+    "before": {},
+    "after": {},
+    "note": "Вымышленная передача для демонстрации отчёта.",
+    "created_at": "2026-11-17T11:21:40.799Z"
+  }
+}
+]

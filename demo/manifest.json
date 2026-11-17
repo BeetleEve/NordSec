@@ -1,0 +1,17 @@
+{
+  "exported_at": "2026-11-17T11:21:41.923456+00:00",
+  "postgresql_version": 18,
+  "counts": {
+    "accounts.user": 4,
+    "aid.category": 6,
+    "aid.item": 13,
+    "aid.helprequest": 3,
+    "aid.reservation": 2,
+    "aid.volunteertask": 1,
+    "aid.transfer": 1,
+    "aid.volunteerapplication": 0,
+    "aid.favorite": 0,
+    "aid.notification": 8,
+    "aid.auditlog": 24
+  }
+}

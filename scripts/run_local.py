@@ -105,7 +105,9 @@ def start_database(env):
 
 def main():
     parser = argparse.ArgumentParser(description='Локальный запуск NordSec')
-    parser.add_argument('--demo', action='store_true', help='Создать вымышленные данные в отдельной локальной базе')
+    demo_group = parser.add_mutually_exclusive_group()
+    demo_group.add_argument('--demo', action='store_true', help='Создать вымышленные данные в отдельной локальной базе')
+    demo_group.add_argument('--demo-db', action='store_true', help='Загрузить демонстрационную базу из папки demo')
     parser.add_argument('--test', action='store_true', help='Запустить тесты Django на PostgreSQL и завершить работу')
     parser.add_argument('--no-browser', action='store_true')
     parser.add_argument('--port', type=int, default=8000)
@@ -119,12 +121,14 @@ def main():
         installed = subprocess.run([str(python), '-c', 'import django,psycopg,PIL,waitress,whitenoise; assert django.VERSION[:2] == (5, 2)'], capture_output=True).returncode == 0
         if not installed:
             execute([python, '-m', 'pip', 'install', '-r', ROOT / 'requirements.txt'])
-        env = local_env(options.demo)
+        env = local_env(options.demo or options.demo_db)
         database = start_database(env)
         execute([python, 'manage.py', 'migrate', '--noinput'], env=env)
         execute([python, 'manage.py', 'check'], env=env)
         if options.demo:
             execute([python, 'manage.py', 'seed_demo'], env=env)
+        if options.demo_db:
+            execute([python, 'manage.py', 'load_demo', '--if-empty'], env=env)
         if options.test:
             execute([python, 'manage.py', 'test', 'apps', '--noinput', '--verbosity=2'], env=env)
             return
