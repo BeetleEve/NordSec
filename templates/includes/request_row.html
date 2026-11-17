@@ -1,0 +1,1 @@
+<a class="list-row" href="{{ req.get_absolute_url }}"><div><strong>№{{ req.pk }} · {{ req.category.name }}</strong><span>{{ req.need|truncatechars:85 }}</span></div><span class="badge badge-{{ req.status }}">{{ req.get_status_display }}</span></a>

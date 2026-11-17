@@ -1,0 +1,13 @@
+.idea/
+.venv/
+.env
+.runtime/
+__pycache__/
+*.py[cod]
+media/
+staticfiles/
+backups/
+*.log
+.coverage
+htmlcov/
+main.pycharm-original.py

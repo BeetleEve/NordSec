@@ -1,0 +1,8 @@
+{% load static %}<article class="item-card">
+  <a class="item-image illustration-{{ item.category.illustration }}" href="{{ item.get_absolute_url }}" aria-label="Подробнее: {{ item.title }}">
+    {% if item.photo %}<img src="{% url 'item_photo' item.pk %}" alt="{{ item.title }}" loading="lazy">{% else %}<img src="{% static 'illustrations/' %}{{ item.category.illustration }}.svg" alt="" loading="lazy">{% endif %}
+    <span class="badge badge-{{ item.status }}">{{ item.get_status_display }}</span>
+    <span class="free-label">Бесплатно</span>
+  </a>
+  <div class="item-card-body"><span class="item-category">{{ item.category.name }}</span><h3><a href="{{ item.get_absolute_url }}">{{ item.title }}</a></h3><p class="item-meta">{{ item.get_condition_display }}{% if item.size %} · {{ item.size }}{% endif %}</p><div class="item-card-bottom"><span><i class="location-dot"></i>{{ item.get_district_display }}</span><a href="{{ item.get_absolute_url }}" aria-label="Подробнее: {{ item.title }}">↗</a></div></div>
+</article>
