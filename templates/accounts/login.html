@@ -20,7 +20,7 @@
     {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
     <button type="submit" class="button full-width">Войти</button>
     <p class="auth-switch">Нет аккаунта? <a href="{% url 'register' %}">Зарегистрироваться</a></p>
-    <p class="fine-print">Для восстановления доступа обратитесь к координатору.</p>
+    <p class="auth-switch"><a href="{% url 'password_reset' %}">Забыли пароль?</a></p>
   </form>
 </section>
 {% endblock %}

@@ -18,7 +18,7 @@ from . import services
 from .forms import (ItemForm, ItemReviewForm, HelpRequestForm, DecisionForm,
                     ReservationForm, ReasonForm, ReservationCancelForm, TransferForm,
                     TransferReversalForm, TaskForm, TaskActionForm, VolunteerForm,
-                    VolunteerDecisionForm, ReportForm, ClarificationForm)
+                    VolunteerDecisionForm, ReportForm, ClarificationForm, RequestEditForm)
 from .models import (Item, Category, HelpRequest, Reservation, VolunteerTask,
                      Transfer, Notification, Favorite, AuditLog, VolunteerApplication)
 from .permissions import coordinator_required, visible_items, visible_requests, visible_tasks
@@ -238,6 +238,7 @@ def request_detail(request, pk):
             return redirect(obj)
     return render(request, 'aid/request_detail.html', {'help_request': obj, 'reservation': reservation, 'task': task, 'transfer': transfer,
         'clarification_form': clarification, 'history': AuditLog.objects.filter(entity='helprequest', object_id=obj.pk)[:20],
+        'can_edit': obj.recipient_id == request.user.pk and obj.status in (HelpRequest.Status.NEW, HelpRequest.Status.CLARIFICATION, HelpRequest.Status.REJECTED),
         'can_cancel': obj.status not in (HelpRequest.Status.COMPLETED, HelpRequest.Status.REJECTED, HelpRequest.Status.CANCELLED)})
 
 
@@ -247,6 +248,19 @@ def request_decide(request, pk):
     form = DecisionForm(request.POST or None, initial={'staff_note': obj.staff_note})
     return workflow_form(request, form=form, title=f'Рассмотреть обращение №{obj.pk}', back_url=obj.get_absolute_url(),
                          operation=lambda: services.decide_request(request.user, pk, **form.cleaned_data))
+
+
+@login_required
+def request_edit(request, pk):
+    obj = get_object_or_404(HelpRequest, pk=pk, recipient=request.user)
+    if obj.status not in (HelpRequest.Status.NEW, HelpRequest.Status.CLARIFICATION, HelpRequest.Status.REJECTED):
+        messages.error(request, 'Обращение уже согласовано. Для изменений свяжитесь с координатором.')
+        return redirect(obj)
+    form = RequestEditForm(request.POST or None, instance=obj)
+    return workflow_form(request, form=form, title=f'Изменить обращение №{pk}',
+                         subtitle=f'Выбранная вещь: {obj.preferred_item.title}.' if obj.preferred_item_id else '',
+                         submit='Сохранить и отправить на рассмотрение', back_url=obj.get_absolute_url(),
+                         operation=lambda: services.edit_request(request.user, pk, form))
 
 
 @login_required

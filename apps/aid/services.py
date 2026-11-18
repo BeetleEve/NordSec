@@ -149,6 +149,24 @@ def submit_request(actor, form, preferred_item=None, on_behalf=False):
 
 
 @transaction.atomic
+def edit_request(actor, request_id, form):
+    obj = HelpRequest.objects.select_for_update().get(pk=request_id)
+    if obj.recipient_id != actor.pk:
+        raise PermissionDenied
+    if obj.status not in (HelpRequest.Status.NEW, HelpRequest.Status.CLARIFICATION, HelpRequest.Status.REJECTED):
+        raise ValidationError('Обращение уже согласовано. Для изменений свяжитесь с координатором.')
+    before = {name: str(getattr(obj, name)) for name in ['status', *form.Meta.fields]}
+    for name in form.Meta.fields:
+        setattr(obj, name, form.cleaned_data[name])
+    obj.status = HelpRequest.Status.NEW
+    obj.decision_reason = ''
+    obj.save()
+    audit(actor, obj, 'Получатель изменил обращение', before)
+    notify_coordinators('Обращение изменено', f'№{obj.pk}: проверьте обновлённые данные.', obj.get_absolute_url())
+    return obj
+
+
+@transaction.atomic
 def decide_request(actor, request_id, action, reason='', staff_note=''):
     require_coordinator(actor)
     obj = HelpRequest.objects.select_for_update().get(pk=request_id)

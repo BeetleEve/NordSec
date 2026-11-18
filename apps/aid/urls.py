@@ -17,6 +17,7 @@ urlpatterns = [
     path('my/favorites/', views.favorites, name='favorites'),
     path('requests/new/', views.request_create, name='request_create'),
     path('requests/<int:pk>/', views.request_detail, name='request_detail'),
+    path('requests/<int:pk>/edit/', views.request_edit, name='request_edit'),
     path('requests/<int:pk>/decide/', views.request_decide, name='request_decide'),
     path('requests/<int:pk>/reserve/', views.request_reserve, name='request_reserve'),
     path('requests/<int:pk>/cancel/', views.request_cancel, name='request_cancel'),

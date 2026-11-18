@@ -700,6 +700,7 @@ hr {
 }
 
 .item-card {
+  display:block;
   border:1px solid var(--line);
   border-radius:12px;
   overflow:hidden;
@@ -823,7 +824,7 @@ hr {
   height:5px;
 }
 
-.item-card-bottom>a {
+.item-card-arrow {
   width:24px;
   height:24px;
   display:flex;
@@ -3320,3 +3321,13 @@ pre {
   font-size:11px;
   letter-spacing:.08em;
 }
+
+/* Form controls remain visible independently of browser password widgets. */
+.password-control { position:relative; }
+.field .password-control input { padding-right:100px !important; }
+.password-toggle { position:absolute; right:6px; top:50%; transform:translateY(-50%); min-height:36px; padding:6px 10px; border:0; border-radius:5px; background:#f4eee4; color:#493b29; font:inherit; font-size:12px; cursor:pointer; }
+.password-toggle[hidden] { display:none; }
+.password-control input::-ms-reveal { display:none; }
+.password-toggle:focus-visible,.item-card:focus-visible { outline:2px solid #bd7e2e; outline-offset:3px; }
+.consent-link { display:inline-block; margin:8px 0 0 28px; font-size:12px; line-height:1.5; color:#74501f; text-decoration:underline; text-underline-offset:3px; }
+@media (forced-colors: active) { .password-toggle { border:1px solid ButtonText; } }

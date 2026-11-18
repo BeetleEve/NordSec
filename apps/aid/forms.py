@@ -65,6 +65,23 @@ class HelpRequestForm(forms.ModelForm):
         return data
 
 
+class RequestEditForm(forms.ModelForm):
+    class Meta:
+        model = HelpRequest
+        fields = ['need', 'recipient_name', 'contact_phone', 'district', 'needs_delivery', 'delivery_address']
+        labels = {'need': 'Комментарий к заявке'}
+        widgets = {'need': forms.Textarea(attrs={'rows': 5})}
+
+    def clean_contact_phone(self):
+        return clean_phone(self.cleaned_data['contact_phone'])
+
+    def clean(self):
+        data = super().clean()
+        if data.get('needs_delivery') and not data.get('delivery_address'):
+            self.add_error('delivery_address', 'Для согласования доставки укажите адрес.')
+        return data
+
+
 class ClarificationForm(forms.ModelForm):
     class Meta:
         model = HelpRequest
