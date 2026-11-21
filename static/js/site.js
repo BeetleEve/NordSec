@@ -1,5 +1,18 @@
 'use strict';
 document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[data-password-toggle]').forEach(button => {
+    const input = document.getElementById(button.getAttribute('aria-controls'));
+    if (!input) return;
+    const label = button.getAttribute('aria-label').replace('Показать пароль: ', '');
+    button.hidden = false;
+    button.addEventListener('click', () => {
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      button.textContent = show ? 'Скрыть' : 'Показать';
+      button.setAttribute('aria-pressed', String(show));
+      button.setAttribute('aria-label', `${show ? 'Скрыть' : 'Показать'} пароль: ${label}`);
+    });
+  });
   const toggle = document.querySelector('.menu-toggle');
   const nav = document.querySelector('#main-nav');
   if (toggle && nav) {

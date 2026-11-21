@@ -13,9 +13,9 @@ def clean_phone(value):
 
 
 class RegisterForm(UserCreationForm):
-    first_name = forms.CharField(label='Имя', max_length=150)
-    last_name = forms.CharField(label='Фамилия', max_length=150)
-    phone = forms.CharField(label='Телефон', max_length=30)
+    first_name = forms.CharField(label='Имя или псевдоним', max_length=150)
+    last_name = forms.CharField(label='Фамилия', max_length=150, required=False)
+    phone = forms.CharField(label='Телефон', max_length=30, required=False)
     email = forms.EmailField(label='Электронная почта', required=False)
     consent = forms.BooleanField(label='Я ознакомился с условиями обработки персональных данных')
 
@@ -25,7 +25,7 @@ class RegisterForm(UserCreationForm):
         labels = {'username': 'Логин'}
 
     def clean_phone(self):
-        return clean_phone(self.cleaned_data['phone'])
+        return clean_phone(self.cleaned_data['phone']) if self.cleaned_data.get('phone') else ''
 
     def save(self, commit=True):
         user = super().save(commit=False)
@@ -42,4 +42,4 @@ class ProfileForm(forms.ModelForm):
         fields = ['first_name', 'last_name', 'phone', 'email', 'district']
 
     def clean_phone(self):
-        return clean_phone(self.cleaned_data['phone'])
+        return clean_phone(self.cleaned_data['phone']) if self.cleaned_data.get('phone') else ''

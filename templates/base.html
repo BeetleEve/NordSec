@@ -1,34 +1,73 @@
 {% load static aid_tags %}<!doctype html>
-<html lang="ru">
+<html lang="ru" data-type="software" data-motion data-radius="soft">
 <head>
+  <script>document.documentElement.classList.add('m-enter');setTimeout(()=>document.documentElement.classList.add('m-enter-done'),700)</script>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="NordSec — предложить вещи, обратиться за вещевой помощью и помочь с передачей в Норильске.">
-  <meta name="theme-color" content="#e8a24b">
-  <title>{% block title %}Вещи, которые помогают{% endblock %} · NordSec</title>
+  <meta name="description" content="NordSec — карта бесплатных вещей у владельцев и на улице.">
+  <meta name="page-type" content="software"><meta name="site-kind" content="software">
+  <meta name="theme-color" content="#e39a3b">
+  <title>{% block title %}Карта бесплатных вещей{% endblock %} · NordSec</title>
   <link rel="icon" href="{% static 'brand/favicon.svg' %}" type="image/svg+xml">
   <link rel="stylesheet" href="{% static 'css/site.css' %}">
+  <link rel="stylesheet" href="{% static 'fonts/onest.css' %}">
+  <link rel="stylesheet" href="{% static 'css/newdesign.css' %}">
+  <link rel="stylesheet" href="{% static 'taste/motion/motion.css' %}">
+  <script type="module" src="{% static 'taste/motion/motion.js' %}"></script>
+  <script type="module" src="{% static 'taste/moments/moments.js' %}"></script>
+  <link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">
+  <link rel="stylesheet" href="{% static 'css/map-platform.css' %}">
+  <script src="{% static 'vendor/leaflet/leaflet.js' %}" defer></script>
+  <script src="{% static 'js/maps.js' %}" defer></script>
   <script src="{% static 'js/site.js' %}" defer></script>
 </head>
 <body>
 <a href="#main" class="skip-link">Перейти к содержимому</a>
-{% if demo_mode %}<div class="demo-bar">Учебная демонстрация · все записи и участники вымышлены · обращения не поступают в фонд</div>{% endif %}
-<div class="topbar"><div class="container topbar-inner"><span><i class="location-dot"></i>Норильск <span class="muted">/</span> Помощь вещами</span><a href="https://t-dobra.ru/" target="_blank" rel="noopener">Основной сайт фонда <span aria-hidden="true">↗</span></a></div></div>
+<div class="topbar"><div class="container topbar-inner"><span><i class="location-dot"></i>Норильск <span class="muted">/</span> Вещи на карте</span><a href="https://t-dobra.ru/" target="_blank" rel="noopener">Основной сайт фонда </a></div></div>
 <header class="header">
   <div class="container header-inner">
-    <a class="brand" href="{% url 'home' %}" aria-label="NordSec — главная"><img src="{% static 'brand/logo.svg' %}" alt="Территория добра" width="208" height="48"><span class="brand-divider"></span><span class="product-name">NordSec<span>вещевая помощь</span></span></a>
+    <a class="brand" href="{% url 'home' %}" aria-label="NordSec — главная"><img src="{% static 'brand/logo.svg' %}" alt="Территория добра" width="208" height="48"><span class="brand-divider"></span><span class="product-name">NordSec<span>карта вещей</span></span></a>
     <button class="menu-toggle" aria-expanded="false" aria-controls="main-nav" type="button">Меню <span aria-hidden="true">☰</span></button>
     <nav id="main-nav" class="nav" aria-label="Основная навигация">
-      <a href="{% url 'catalog' %}" {% if request.resolver_match.url_name == 'catalog' %}aria-current="page"{% endif %}>Каталог вещей</a>
-      <a href="{% url 'about' %}">Как это работает</a>
-      <a href="{% url 'volunteers' %}">Волонтёрам</a>
+      <a href="{% url 'catalog' %}" {% if request.resolver_match.url_name == 'catalog' %}aria-current="page"{% endif %}>Карта вещей</a>
+      <a href="{% url 'about' %}" {% if request.resolver_match.url_name == 'about' %}aria-current="page"{% endif %}>Как это работает</a>
+      <a href="{% url 'volunteers' %}" {% if request.resolver_match.url_name == 'volunteers' %}aria-current="page"{% endif %}>Волонтёрам</a>
     </nav>
     <div class="header-actions">
-      {% if user.is_authenticated %}<a class="notification-link" href="{% url 'notifications' %}" aria-label="Уведомления, непрочитанных: {{ unread_count }}"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>{% if unread_count %}<span class="notification-dot">{{ unread_count }}</span>{% endif %}</a><a class="button button-soft button-small" href="{% url 'dashboard' %}"><span class="avatar-small">{{ user.first_name|first|default:user.username|first }}</span>Кабинет</a>
-      {% else %}<a class="login-link" href="{% url 'login' %}">Войти</a><a class="button button-small" href="{% url 'item_create' %}">Хочу помочь <span aria-hidden="true">↗</span></a>{% endif %}
+      {% if user.is_authenticated %}<a class="notification-link" href="{% url 'notifications' %}" aria-label="Уведомления, непрочитанных: {{ unread_count }}"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>{% if unread_count %}<span class="notification-dot">{{ unread_count }}</span>{% endif %}</a><a class="button btn button-soft button-small" href="{% url 'dashboard' %}"><span class="avatar-small">{{ user.first_name|first|default:user.username|first }}</span>Кабинет</a>
+      {% else %}<a class="login-link" href="{% url 'login' %}">Войти</a><a class="button btn button-small" href="{% url 'item_create' %}">Разместить вещь</a>{% endif %}
     </div>
   </div>
 </header>
 {% if messages %}<div class="container messages" role="status" aria-live="polite">{% for message in messages %}<div class="message {{ message.tags }}">{{ message }}<button type="button" aria-label="Закрыть сообщение" data-dismiss>×</button></div>{% endfor %}</div>{% endif %}
 <main id="main">{% block content %}{% endblock %}</main>
-<footer class="footer"><div class="container"><div class="footer-main"><div><a class="footer-brand" href="{% url 'home' %}">NordSec<span class="orange">.</span></a><p>Нужные вещи. Добрые дела.<br>Помощь рядом — в Норильске.</p></div><div><h3>Участвовать</h3><a href="{% url 'item_create' %}">Предложить вещь</a><a href="{% url 'request_create' %}">Обратиться за помощью</a><a href="{% url 'volunteers' %}">Стать волонтёром</a></div><div><h3>О проекте</h3><a href="{% url 'about' %}">Как работает NordSec</a><a href="{% url 'privacy' %}">Обработка данных</a><a href="https://t-dobra.ru/contacts/" target="_blank" rel="noopener">Связаться с фондом ↗</a></div><div class="footer-note"><span class="eyebrow">ТЕРРИТОРИЯ ДОБРА</span><p>Проект системы вещевой помощи для благотворительного фонда. Бесплатная передача вещей после согласования с координатором.</p></div></div><div class="footer-bottom"><span>© {% now 'Y' %} NordSec · Учебный проект</span><span>С заботой о людях и вещах <span class="orange" aria-hidden="true">♡</span></span></div></div></footer>
+<footer class="footer">
+  <div class="container">
+    <div class="footer-main">
+      <div>
+        <a class="footer-brand" href="{% url 'home' %}">NordSec</a>
+        <p>Бесплатные вещи рядом<br>Карта бесплатных вещей</p>
+      </div>
+      <div>
+        <h3>Помощь</h3>
+        <a href="{% url 'item_create' %}">Разместить вещь</a>
+        <a href="{% url 'catalog' %}">Найти вещь</a>
+        <a href="{% url 'volunteers' %}">Волонтёрам</a>
+      </div>
+      <div>
+        <h3>Информация</h3>
+        <a href="{% url 'about' %}">Как это работает</a>
+        <a href="{% url 'privacy' %}">Обработка данных</a>
+        <a href="https://t-dobra.ru/contacts/" target="_blank" rel="noopener">Сайт Территории добра</a>
+      </div>
+      <div class="footer-note">
+        <h3>Передача вещей</h3>
+        <p>Вещи передаются бесплатно. Уличную вещь можно забрать без встречи с автором.</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© {% now 'Y' %} NordSec</span>
+      <a href="{% url 'privacy' %}">Обработка персональных данных</a>
+    </div>
+  </div>
+</footer>
 </body></html>

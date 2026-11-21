@@ -3,15 +3,15 @@
   "postgresql_version": 18,
   "counts": {
     "accounts.user": 4,
-    "aid.category": 6,
-    "aid.item": 13,
+    "aid.auditlog": 24,
+    "aid.category": 7,
+    "aid.contact": 2,
     "aid.helprequest": 3,
-    "aid.reservation": 2,
-    "aid.volunteertask": 1,
-    "aid.transfer": 1,
-    "aid.volunteerapplication": 0,
-    "aid.favorite": 0,
+    "aid.item": 13,
     "aid.notification": 8,
-    "aid.auditlog": 24
-  }
+    "aid.reservation": 2,
+    "aid.transfer": 1,
+    "aid.volunteertask": 1
+  },
+  "schema_version": "map-platform-2026-11"
 }

@@ -14,7 +14,7 @@ def register(request):
         with transaction.atomic():
             user = form.save()
         login(request, user)
-        messages.success(request, 'Аккаунт создан. Теперь можно предложить вещи или оставить обращение.')
+        messages.success(request, 'Аккаунт создан. Теперь можно размещать вещи и сохранять объявления.')
         return redirect('dashboard')
     return render(request, 'accounts/register.html', {'form': form})
 

@@ -6,7 +6,7 @@ class User(AbstractUser):
     class Role(models.TextChoices):
         MEMBER = 'member', 'Участник'
         VOLUNTEER = 'volunteer', 'Волонтёр'
-        COORDINATOR = 'coordinator', 'Координатор'
+        MODERATOR = 'moderator', 'Модератор'
 
     class District(models.TextChoices):
         CENTRAL = 'central', 'Центральный район'
@@ -21,7 +21,11 @@ class User(AbstractUser):
 
     @property
     def is_coordinator(self):
-        return self.is_authenticated and (self.is_superuser or self.role == self.Role.COORDINATOR)
+        return self.is_authenticated and (self.is_superuser or self.role == self.Role.MODERATOR)
+
+    @property
+    def is_moderator(self):
+        return self.is_coordinator
 
     @property
     def is_volunteer(self):
@@ -32,5 +36,7 @@ class User(AbstractUser):
         return self.get_full_name() or self.username
 
     class Meta:
+        db_table = 'users'
+        db_table_comment = 'Учётные записи и роли пользователей'
         verbose_name = 'пользователь'
         verbose_name_plural = 'пользователи'

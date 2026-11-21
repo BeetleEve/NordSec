@@ -18,10 +18,10 @@ from . import services
 from .forms import (ItemForm, ItemReviewForm, HelpRequestForm, DecisionForm,
                     ReservationForm, ReasonForm, ReservationCancelForm, TransferForm,
                     TransferReversalForm, TaskForm, TaskActionForm, VolunteerForm,
-                    VolunteerDecisionForm, ReportForm, ClarificationForm)
+                    VolunteerDecisionForm, ReportForm, ClarificationForm, RequestEditForm)
 from .models import (Item, Category, HelpRequest, Reservation, VolunteerTask,
                      Transfer, Notification, Favorite, AuditLog, VolunteerApplication)
-from .permissions import coordinator_required, visible_items, visible_requests, visible_tasks
+from .permissions import coordinator_required, visible_items, visible_requests, visible_tasks, public_items
 
 
 def paginate(request, queryset, size=12):
@@ -44,25 +44,28 @@ def workflow_form(request, *, form, title, subtitle='', submit='Сохранит
         if result is not None:
             messages.success(request, 'Изменения сохранены.')
             return redirect(result.get_absolute_url() if hasattr(result, 'get_absolute_url') else back_url)
-    return render(request, 'aid/form.html', {'form': form, 'page_title': title, 'subtitle': subtitle, 'submit_label': submit, 'back_url': back_url})
+    return render(request, 'aid/form.html', {'form': form, 'page_title': title, 'subtitle': subtitle, 'submit_label': submit, 'back_url': back_url, 'is_item_form': isinstance(form, ItemForm)})
 
 
 def home(request):
     return render(request, 'aid/home.html', {
-        'items': Item.objects.filter(status=Item.Status.AVAILABLE).select_related('category')[:4],
+        'items': public_items().select_related('category')[:4],
         'categories': Category.objects.annotate(available_count=Count('items', filter=Q(items__status=Item.Status.AVAILABLE))).order_by('order', 'name'),
-        'available_count': Item.objects.filter(status=Item.Status.AVAILABLE).count(),
+        'available_count': public_items().count(),
         'transfer_count': Transfer.objects.filter(reversed_at__isnull=True).count(),
         'volunteer_count': User.objects.filter(role=User.Role.VOLUNTEER, is_active=True).count(),
     })
 
 
 def catalog(request):
-    items = Item.objects.filter(status__in=[Item.Status.AVAILABLE, Item.Status.RESERVED]).select_related('category')
+    items = public_items().select_related('category')
     q = request.GET.get('q', '').strip()[:150]
     category = request.GET.get('category', '')
     district = request.GET.get('district', '')
     condition = request.GET.get('condition', '')
+    placement = request.GET.get('placement', '')
+    if placement in Item.Placement.values:
+        items = items.filter(placement=placement)
     if q:
         items = items.filter(Q(title__icontains=q) | Q(description__icontains=q) | Q(size__icontains=q))
     if category:
@@ -79,7 +82,7 @@ def catalog(request):
     return render(request, 'aid/catalog.html', {
         'page_obj': paginate(request, items), 'categories': Category.objects.all(),
         'districts': User.District.choices, 'conditions': Item.Condition.choices,
-        'favorite_ids': favorite_ids, 'filters': {'q': q, 'category': category, 'district': district, 'condition': condition, 'sort': sort},
+        'favorite_ids': favorite_ids, 'filters': {'q': q, 'category': category, 'district': district, 'condition': condition, 'sort': sort, 'placement': placement},
     })
 
 
@@ -89,10 +92,14 @@ def item_detail(request, pk):
     staff = request.user.is_authenticated and request.user.is_coordinator
     reservation = item.reservations.filter(status=Reservation.Status.ACTIVE).select_related('request').first() if own or staff else None
     history = AuditLog.objects.filter(entity='item', object_id=item.pk)[:15] if own or staff else []
+    point = None
+    if item.latitude is not None and item.longitude is not None:
+        point = {'latitude': float(item.latitude) if item.placement == 'street' else round(float(item.latitude), 3), 'longitude': float(item.longitude) if item.placement == 'street' else round(float(item.longitude), 3), 'approximate': item.placement != 'street'}
     return render(request, 'aid/item_detail.html', {
+        'map_point': point,
         'item': item, 'own_item': own, 'staff_item': staff, 'reservation': reservation, 'history': history,
         'is_favorite': request.user.is_authenticated and Favorite.objects.filter(user=request.user, item=item).exists(),
-        'can_edit': (own or staff) and item.status in [Item.Status.REVIEW, Item.Status.REJECTED],
+        'can_edit': (own or staff) and item.status in [Item.Status.REVIEW, Item.Status.REJECTED, Item.Status.AVAILABLE],
         'can_withdraw': (own or staff) and item.status in [Item.Status.REVIEW, Item.Status.AVAILABLE, Item.Status.REJECTED],
     })
 
@@ -114,10 +121,11 @@ def item_create(request):
     form = ItemForm(request.POST or None, request.FILES or None, initial={
         'donor_name': '' if behalf else request.user.display_name,
         'contact_phone': '' if behalf else request.user.phone, 'district': request.user.district,
+        'placement': request.GET.get('placement') if request.GET.get('placement') in Item.Placement.values else Item.Placement.HOME,
     })
-    return workflow_form(request, form=form, title='Зарегистрировать вещь' if behalf else 'Предложить вещь',
-                         subtitle='После проверки координатором вещь появится в каталоге. Передача всегда бесплатна.',
-                         submit='Отправить на проверку', operation=lambda: services.submit_item(request.user, form, behalf))
+    return workflow_form(request, form=form, title='Разместить вещь',
+                         subtitle='',
+                         submit='Разместить вещь', operation=lambda: services.submit_item(request.user, form, behalf))
 
 
 @login_required
@@ -125,11 +133,11 @@ def item_edit(request, pk):
     item = get_object_or_404(visible_items(request.user), pk=pk)
     if item.donor_id != request.user.pk and not request.user.is_coordinator:
         raise PermissionDenied
-    if item.status not in (Item.Status.REVIEW, Item.Status.REJECTED):
+    if item.status not in (Item.Status.REVIEW, Item.Status.REJECTED, Item.Status.AVAILABLE):
         messages.error(request, 'Редактирование недоступно для текущего состояния вещи.')
         return redirect(item)
     form = ItemForm(request.POST or None, request.FILES or None, instance=item)
-    return workflow_form(request, form=form, title='Уточнить предложение', submit='Сохранить и отправить на проверку',
+    return workflow_form(request, form=form, title='Редактировать объявление', submit='Сохранить изменения',
                          back_url=item.get_absolute_url(), operation=lambda: services.edit_item(request.user, pk, form))
 
 
@@ -138,7 +146,7 @@ def item_review(request, pk):
     item = get_object_or_404(Item, pk=pk)
     form = ItemReviewForm(request.POST or None)
     return workflow_form(request, form=form, title=f'Проверка: {item.title}',
-                         subtitle='Проверьте состояние, описание и фактическое местонахождение. Одобрение публикует вещь в каталоге.',
+                         subtitle='Проверьте фото, описание и допустимость публикации. Проверка не подтверждает наличие вещи на месте.',
                          back_url=item.get_absolute_url(), operation=lambda: services.review_item(request.user, pk, **form.cleaned_data))
 
 
@@ -148,7 +156,7 @@ def item_withdraw(request, pk):
     if item.donor_id != request.user.pk and not request.user.is_coordinator:
         raise PermissionDenied
     form = ReasonForm(request.POST or None)
-    return workflow_form(request, form=form, title='Снять вещь с передачи', subtitle=item.title,
+    return workflow_form(request, form=form, title='Закрыть объявление', subtitle=item.title,
                          back_url=item.get_absolute_url(), operation=lambda: services.withdraw_item(request.user, pk, form.cleaned_data['reason']))
 
 
@@ -172,7 +180,7 @@ def favorites(request):
 def dashboard(request):
     context = {
         'own_items': Item.objects.filter(donor=request.user).select_related('category')[:6],
-        'own_requests': request.user.help_requests.select_related('category')[:6],
+        'own_requests': request.user.help_requests.select_related('preferred_item__category', 'unselected_category', 'contact')[:6],
         'tasks': visible_tasks(request.user).exclude(status=VolunteerTask.Status.CANCELLED).select_related('reservation__item')[:4] if request.user.is_volunteer else [],
     }
     if request.user.is_coordinator:
@@ -181,7 +189,7 @@ def dashboard(request):
             'pending_requests': HelpRequest.objects.filter(status__in=[HelpRequest.Status.NEW, HelpRequest.Status.CLARIFICATION]).count(),
             'active_reservations': Reservation.objects.filter(status=Reservation.Status.ACTIVE).count(),
             'unassigned_tasks': VolunteerTask.objects.filter(status=VolunteerTask.Status.OPEN).count(),
-            'recent_requests': HelpRequest.objects.select_related('category', 'coordinator')[:6],
+            'recent_requests': HelpRequest.objects.select_related('preferred_item__category', 'unselected_category', 'contact', 'coordinator')[:6],
             'expiring': Reservation.objects.filter(status=Reservation.Status.ACTIVE, expires_at__lte=timezone.now()+timedelta(days=1)).select_related('item', 'request')[:5],
         })
     return render(request, 'aid/dashboard.html', context)
@@ -194,32 +202,41 @@ def my_items(request):
 
 @login_required
 def my_requests(request):
-    return render(request, 'aid/requests.html', {'page_obj': paginate(request, request.user.help_requests.select_related('category'))})
+    return render(request, 'aid/requests.html', {'page_obj': paginate(request, request.user.help_requests.select_related('preferred_item__category', 'unselected_category', 'contact'))})
 
 
 @login_required
 def request_create(request):
+    behalf = request.GET.get('on_behalf') == '1' and request.user.is_coordinator
     preferred = None
     if request.GET.get('item'):
         if not request.GET['item'].isascii() or not request.GET['item'].isdigit() or len(request.GET['item']) > 18:
             raise Http404
         preferred = get_object_or_404(Item, pk=request.GET['item'], status=Item.Status.AVAILABLE)
-    behalf = request.GET.get('on_behalf') == '1' and request.user.is_coordinator
+    if not preferred and not behalf:
+        messages.info(request, 'Выберите вещь в каталоге, чтобы отправить заявку.')
+        return redirect('catalog')
+    if preferred:
+        return redirect('item_contact', pk=preferred.pk)
     initial = {'recipient_name': '' if behalf else request.user.display_name,
                'contact_phone': '' if behalf else request.user.phone, 'district': request.user.district}
     if preferred:
-        initial.update(category=preferred.category, need=f'Прошу рассмотреть возможность получения: {preferred.title}.')
+        initial.update(category=preferred.category, need=f'Хочу получить: {preferred.title}.')
     form = HelpRequestForm(request.POST or None, initial=initial)
     if preferred:
         form.fields['category'].disabled = True
-    return workflow_form(request, form=form, title='Зарегистрировать обращение' if behalf else 'Получить помощь',
-                         subtitle=f'Выбрана вещь: {preferred.title}. Решение и резерв подтвердит координатор.' if preferred else 'Опишите, что вам нужно. Обратиться можно и тогда, когда подходящей вещи пока нет в каталоге.',
-                         submit='Отправить обращение', operation=lambda: services.submit_request(request.user, form, preferred, behalf))
+        form.fields['need'].label = 'Комментарий к заявке'
+        form.fields['need'].help_text = 'Можно указать удобное время передачи или задать вопрос о вещи.'
+    return workflow_form(request, form=form, title='Записать обращение' if behalf else 'Заявка на вещь',
+                         subtitle=f'{preferred.title}. Укажите контакты, чтобы договориться о передаче.' if preferred else 'Запишите обращение человека, который связался с фондом.',
+                         submit='Сохранить обращение' if behalf else 'Отправить заявку',
+                         back_url=preferred.get_absolute_url() if preferred else 'workspace',
+                         operation=lambda: services.submit_request(request.user, form, preferred, behalf))
 
 
 @login_required
 def request_detail(request, pk):
-    obj = get_object_or_404(visible_requests(request.user).select_related('category', 'preferred_item', 'recipient', 'coordinator'), pk=pk)
+    obj = get_object_or_404(visible_requests(request.user).select_related('preferred_item__category', 'unselected_category', 'contact', 'recipient', 'coordinator'), pk=pk)
     reservation = obj.reservations.filter(status=Reservation.Status.ACTIVE).select_related('item').first()
     task = VolunteerTask.objects.filter(reservation=reservation).first() if reservation else None
     transfer = Transfer.objects.filter(reservation__request=obj, reversed_at__isnull=True).first()
@@ -227,10 +244,11 @@ def request_detail(request, pk):
     if request.method == 'POST' and clarification and clarification.is_valid():
         result = try_operation(clarification, lambda: services.clarify_request(request.user, pk, **clarification.cleaned_data))
         if result:
-            messages.success(request, 'Уточнение отправлено координатору.')
+            messages.success(request, 'Уточнение отправлено модератору.')
             return redirect(obj)
     return render(request, 'aid/request_detail.html', {'help_request': obj, 'reservation': reservation, 'task': task, 'transfer': transfer,
         'clarification_form': clarification, 'history': AuditLog.objects.filter(entity='helprequest', object_id=obj.pk)[:20],
+        'can_edit': obj.recipient_id == request.user.pk and obj.status in (HelpRequest.Status.NEW, HelpRequest.Status.CLARIFICATION, HelpRequest.Status.REJECTED),
         'can_cancel': obj.status not in (HelpRequest.Status.COMPLETED, HelpRequest.Status.REJECTED, HelpRequest.Status.CANCELLED)})
 
 
@@ -243,11 +261,24 @@ def request_decide(request, pk):
 
 
 @login_required
+def request_edit(request, pk):
+    obj = get_object_or_404(HelpRequest, pk=pk, recipient=request.user)
+    if obj.status not in (HelpRequest.Status.NEW, HelpRequest.Status.CLARIFICATION, HelpRequest.Status.REJECTED):
+        messages.error(request, 'Обращение уже подтверждено. Для изменений свяжитесь с модератором.')
+        return redirect(obj)
+    form = RequestEditForm(request.POST or None, instance=obj)
+    return workflow_form(request, form=form, title=f'Изменить обращение №{pk}',
+                         subtitle=f'Выбранная вещь: {obj.preferred_item.title}.' if obj.preferred_item_id else '',
+                         submit='Сохранить и отправить на рассмотрение', back_url=obj.get_absolute_url(),
+                         operation=lambda: services.edit_request(request.user, pk, form))
+
+
+@login_required
 def request_cancel(request, pk):
     obj = get_object_or_404(visible_requests(request.user), pk=pk)
     form = ReasonForm(request.POST or None)
     return workflow_form(request, form=form, title=f'Отменить обращение №{pk}', back_url=obj.get_absolute_url(),
-                         subtitle='Если вещь уже у волонтёра, сначала свяжитесь с координатором для согласования возврата.',
+                         subtitle='Если вещь уже у волонтёра, сначала свяжитесь с модератором для обсуждения возврата.',
                          operation=lambda: services.cancel_request(request.user, pk, form.cleaned_data['reason']))
 
 
@@ -261,7 +292,7 @@ def request_reserve(request, pk):
         services.reserve(request.user, pk, item.pk, **values)
         return obj
     return workflow_form(request, form=form, title=f'Подобрать вещь: обращение №{pk}', back_url=obj.get_absolute_url(),
-                         subtitle='В списке только доступные вещи нужной категории. Система исключает одновременный резерв одной вещи.', operation=operation)
+                         subtitle='Выберите доступную вещь нужной категории и укажите срок резерва.', operation=operation)
 
 
 @coordinator_required
@@ -320,23 +351,26 @@ def volunteers(request):
 @login_required
 def volunteer_apply(request):
     existing = VolunteerApplication.objects.filter(user=request.user).first()
-    if request.user.is_volunteer or (existing and existing.status != VolunteerApplication.Status.REJECTED):
+    if request.user.is_volunteer or (existing and existing.status == VolunteerApplication.Status.APPROVED):
         return redirect('volunteers')
     form = VolunteerForm(request.POST or None, instance=existing)
     def operation():
         with transaction.atomic():
             app = form.save(commit=False)
             app.user = request.user
-            app.status = VolunteerApplication.Status.NEW
+            app.status = VolunteerApplication.Status.APPROVED
             app.decision_reason = ''
             app.save()
-            services.audit(request.user, app, 'Отправлена заявка волонтёра')
-            services.notify_coordinators('Новая заявка волонтёра', request.user.display_name, '/workspace/?kind=volunteers')
+            if request.user.role == User.Role.MEMBER:
+                request.user.role = User.Role.VOLUNTEER
+                request.user.save(update_fields=['role'])
+            services.audit(request.user, app, 'Участник включил помощь с вещами')
+
         return 'volunteers'
     if request.method == 'POST' and form.is_valid():
         result = try_operation(form, operation)
         if result:
-            messages.success(request, 'Заявка отправлена. После одобрения откроются поручения.')
+            messages.success(request, 'Вы можете помогать другим участникам.')
             return redirect('volunteers')
     return render(request, 'aid/form.html', {'form': form, 'page_title': 'Стать волонтёром', 'submit_label': 'Отправить заявку', 'back_url': 'volunteers'})
 
@@ -384,14 +418,14 @@ def task_detail(request, pk):
 
 @coordinator_required
 def workspace(request):
-    kind = request.GET.get('kind', 'requests')
+    kind = request.GET.get('kind', 'items')
     status = request.GET.get('status', '')
     q = request.GET.get('q', '').strip()[:150]
     if kind == 'items':
         queryset = Item.objects.select_related('category')
         choices = Item.Status.choices
         if q:
-            queryset = queryset.filter(Q(title__icontains=q) | Q(donor_name__icontains=q))
+            queryset = queryset.filter(Q(title__icontains=q) | Q(contact__name__icontains=q))
     elif kind == 'volunteers':
         queryset = VolunteerApplication.objects.select_related('user')
         choices = VolunteerApplication.Status.choices
@@ -399,10 +433,10 @@ def workspace(request):
             queryset = queryset.filter(Q(user__first_name__icontains=q) | Q(user__last_name__icontains=q))
     else:
         kind = 'requests'
-        queryset = HelpRequest.objects.select_related('category', 'coordinator')
+        queryset = HelpRequest.objects.select_related('preferred_item__category', 'unselected_category', 'contact', 'coordinator')
         choices = HelpRequest.Status.choices
         if q:
-            queryset = queryset.filter(Q(recipient_name__icontains=q) | Q(need__icontains=q))
+            queryset = queryset.filter(Q(contact__name__icontains=q) | Q(need__icontains=q))
     if status in dict(choices):
         queryset = queryset.filter(status=status)
     return render(request, 'aid/workspace.html', {'kind': kind, 'status': status, 'q': q, 'status_choices': choices, 'page_obj': paginate(request, queryset, 15)})
@@ -487,3 +521,31 @@ def error404(request, exception=None):
 
 def error500(request):
     return render(request, 'errors/error.html', {'code': '500', 'heading': 'Не удалось открыть страницу', 'description': 'Попробуйте позже. Если вы отправляли форму, проверьте запись в личном кабинете перед повторной отправкой.'}, status=500)
+
+
+@login_required
+def item_contact(request, pk):
+    item = get_object_or_404(visible_items(request.user).select_related('contact', 'donor'), pk=pk)
+    if item.placement == Item.Placement.STREET:
+        return redirect(item)
+    if item.status != Item.Status.AVAILABLE:
+        messages.info(request, 'Это объявление уже закрыто.')
+        return redirect(item)
+    response = render(request, 'aid/item_contact.html', {'item': item})
+    response['Cache-Control'] = 'private, no-store'
+    return response
+
+
+@login_required
+@require_POST
+def item_signal(request, pk):
+    from .models import ItemSignal
+    obj = get_object_or_404(visible_items(request.user), pk=pk)
+    kind = request.POST.get('kind')
+    try:
+        services.signal_item(request.user, obj.pk, kind)
+    except ValidationError as exc:
+        messages.error(request, ' '.join(exc.messages))
+    else:
+        messages.success(request, 'Отметка сохранена. Спасибо за обновление.')
+    return redirect('catalog')

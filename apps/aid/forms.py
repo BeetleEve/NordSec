@@ -6,6 +6,7 @@ from django.utils import timezone
 from PIL import Image, ImageOps, UnidentifiedImageError
 from apps.accounts.forms import clean_phone
 from .models import Item, HelpRequest, Reservation, VolunteerTask, VolunteerApplication
+from .districts import district_at
 
 
 class PhotoMixin:
@@ -31,23 +32,110 @@ class PhotoMixin:
             raise forms.ValidationError('Загрузите корректное фото JPG, PNG или WEBP. Максимум 24 мегапикселя.')
 
 
-class ItemForm(PhotoMixin, forms.ModelForm):
+class ContactFormMixin:
+    contact_phone = forms.CharField(label='Телефон для связи', max_length=30)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            for name in ('donor_name', 'recipient_name', 'contact_phone', 'category'):
+                if name in self.fields:
+                    value = getattr(self.instance, name)
+                    self.initial[name] = value.pk if hasattr(value, 'pk') else value
+
+    def save(self, commit=True):
+        obj = super().save(commit=False)
+        for name in ('donor_name', 'recipient_name', 'contact_phone', 'category'):
+            if name in self.cleaned_data:
+                setattr(obj, name, self.cleaned_data[name])
+        if commit:
+            obj.save()
+        return obj
+
+
+class ItemForm(ContactFormMixin, PhotoMixin, forms.ModelForm):
+    donor_name = forms.CharField(label='Как к вам обращаться', max_length=150, required=False)
+    contact_phone = forms.CharField(label='Телефон для связи', max_length=30, required=False, help_text='Для вещи у владельца телефон увидят вошедшие участники. Для отметки на улице он не нужен.')
+    def __init__(self, *args, **kwargs):
+        # Older clients had only owner listings; preserve their explicit address workflow.
+        if args and args[0] is not None and 'placement' not in args[0]:
+            data = args[0].copy()
+            data['placement'] = Item.Placement.HOME
+            args = (data, *args[1:])
+        if kwargs.get('data') is not None and 'placement' not in kwargs['data']:
+            kwargs['data'] = kwargs['data'].copy()
+            kwargs['data']['placement'] = Item.Placement.HOME
+        data = args[0] if args and args[0] is not None else kwargs.get('data')
+        if data is not None and not data.get('district'):
+            try:
+                detected = district_at(data.get('latitude') or None, data.get('longitude') or None)
+            except (ValueError, TypeError, OverflowError):
+                detected = None
+            if detected:
+                data = data.copy()
+                data['district'] = detected
+                if args:
+                    args = (data, *args[1:])
+                else:
+                    kwargs['data'] = data
+        super().__init__(*args, **kwargs)
+        if self.data.get('placement', self.initial.get('placement')) == Item.Placement.STREET:
+            for name in ('donor_name', 'contact_phone'):
+                self.fields[name].disabled = True
+                self.initial[name] = ''
+
     class Meta:
         model = Item
-        fields = ['title', 'category', 'description', 'condition', 'size', 'district', 'pickup_address', 'needs_transport', 'photo', 'donor_name', 'contact_phone']
-        widgets = {'description': forms.Textarea(attrs={'rows': 5}), 'photo': forms.ClearableFileInput(attrs={'accept': 'image/jpeg,image/png,image/webp'})}
+        fields = ['placement', 'category', 'title', 'condition', 'description', 'pickup_address', 'latitude', 'longitude', 'location_accuracy', 'photo', 'size', 'district', 'donor_name', 'contact_phone']
+        widgets = {'description': forms.Textarea(attrs={'rows': 5}), 'photo': forms.ClearableFileInput(attrs={'accept': 'image/jpeg,image/png,image/webp', 'capture': 'environment'}), 'latitude': forms.HiddenInput(), 'longitude': forms.HiddenInput(), 'location_accuracy': forms.HiddenInput()}
         help_texts = {
-            'pickup_address': 'Точный адрес увидят только координатор и назначенный волонтёр.',
+            'condition': 'Если не проверяли вещь, выберите «Не проверено». Можно размещать вещи на запчасти.',
+            'pickup_address': 'Введите адрес или выберите точку на карте.',
+            'district': 'Определяется по точке на карте. Проверьте выбранный район.',
             'photo': 'JPG, PNG или WEBP до 5 МБ. Не добавляйте документы и личные данные.',
-            'needs_transport': 'Доставка согласуется отдельно и зависит от доступности волонтёров.',
+            'needs_transport': 'Доставка определяется отдельно и зависит от доступности волонтёров.',
         }
 
+    def clean_condition(self):
+        return self.cleaned_data.get('condition') or Item.Condition.UNKNOWN
+
     def clean_contact_phone(self):
-        return clean_phone(self.cleaned_data['contact_phone'])
+        value = self.cleaned_data.get('contact_phone', '')
+        return clean_phone(value) if value else ''
 
 
-class HelpRequestForm(forms.ModelForm):
-    consent = forms.BooleanField(label='Согласен на обработку данных обращения для организации помощи')
+    def clean(self):
+        data = super().clean()
+        lat, lon = data.get('latitude'), data.get('longitude')
+        if (lat is None) != (lon is None):
+            self.add_error('pickup_address', 'Выберите точку на карте заново.')
+        if lat is not None and not -90 <= lat <= 90:
+            self.add_error('pickup_address', 'Некорректная широта.')
+        if lon is not None and not -180 <= lon <= 180:
+            self.add_error('pickup_address', 'Некорректная долгота.')
+        if not data.get('pickup_address') and lat is None:
+            self.add_error('pickup_address', 'Укажите адрес или поставьте метку на карте.')
+        if data.get('placement') == 'street':
+            if (data.get('location_accuracy') or 0) > 100:
+                self.add_error('pickup_address', 'Геолокация слишком неточная. Уточните точку вручную на карте.')
+            if lat is None or lon is None:
+                self.add_error('pickup_address', 'Для вещи на улице нужна метка на карте.')
+            if not data.get('photo'):
+                self.add_error('photo', 'Сфотографируйте вещь на месте, чтобы её можно было узнать.')
+            if self.instance.pk and not self.files.get('photo') and (self.initial.get('placement') != 'street' or (self.instance.expires_at and self.instance.expires_at <= timezone.now())):
+                self.add_error('photo', 'Для новой отметки на улице сделайте актуальное фото на месте.')
+            data['donor_name'] = ''
+            data['contact_phone'] = ''
+        elif not data.get('contact_phone'):
+            self.add_error('contact_phone', 'Укажите телефон для прямой связи с получателем.')
+        return data
+
+
+class HelpRequestForm(ContactFormMixin, forms.ModelForm):
+    recipient_name = forms.CharField(label='Имя получателя', max_length=150)
+    contact_phone = forms.CharField(label='Телефон для связи', max_length=30)
+    category = forms.ModelChoiceField(label='Категория', queryset=Item._meta.get_field('category').remote_field.model.objects.all())
+    consent = forms.BooleanField(label='Разрешаю обработку данных обращения')
 
     class Meta:
         model = HelpRequest
@@ -61,11 +149,31 @@ class HelpRequestForm(forms.ModelForm):
     def clean(self):
         data = super().clean()
         if data.get('needs_delivery') and not data.get('delivery_address'):
-            self.add_error('delivery_address', 'Для согласования доставки укажите адрес.')
+            self.add_error('delivery_address', 'Для обсуждения доставки укажите адрес.')
         return data
 
 
-class ClarificationForm(forms.ModelForm):
+class RequestEditForm(ContactFormMixin, forms.ModelForm):
+    recipient_name = forms.CharField(label='Имя получателя', max_length=150)
+    contact_phone = forms.CharField(label='Телефон для связи', max_length=30)
+    class Meta:
+        model = HelpRequest
+        fields = ['need', 'recipient_name', 'contact_phone', 'district', 'needs_delivery', 'delivery_address']
+        labels = {'need': 'Комментарий к заявке'}
+        widgets = {'need': forms.Textarea(attrs={'rows': 5})}
+
+    def clean_contact_phone(self):
+        return clean_phone(self.cleaned_data['contact_phone'])
+
+    def clean(self):
+        data = super().clean()
+        if data.get('needs_delivery') and not data.get('delivery_address'):
+            self.add_error('delivery_address', 'Для обсуждения доставки укажите адрес.')
+        return data
+
+
+class ClarificationForm(ContactFormMixin, forms.ModelForm):
+    contact_phone = forms.CharField(label='Телефон для связи', max_length=30)
     class Meta:
         model = HelpRequest
         fields = ['need', 'contact_phone', 'delivery_address']
@@ -88,9 +196,8 @@ class DecisionForm(forms.Form):
 
 
 class ItemReviewForm(forms.Form):
-    action = forms.ChoiceField(label='Решение', choices=[('approve', 'Принять вещь'), ('reject', 'Отклонить предложение')])
-    location = forms.ChoiceField(label='Подтверждённое местонахождение', choices=[('donor', 'У жертвователя'), ('fund', 'В пункте фонда')])
-    reason = forms.CharField(label='Комментарий жертвователю', max_length=1500, required=False, widget=forms.Textarea(attrs={'rows': 3}))
+    action = forms.ChoiceField(label='Решение', choices=[('approve', 'Разрешить публикацию'), ('reject', 'Отклонить объявление')])
+    reason = forms.CharField(label='Комментарий автору', max_length=1500, required=False, widget=forms.Textarea(attrs={'rows': 3}))
 
     def clean(self):
         data = super().clean()
@@ -109,6 +216,7 @@ class ReservationForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.fields['item'].queryset = Item.objects.filter(status=Item.Status.AVAILABLE, category=help_request.category).exclude(donor_id=help_request.recipient_id) if help_request.recipient_id else Item.objects.filter(status=Item.Status.AVAILABLE, category=help_request.category)
         if help_request.preferred_item_id:
+            self.fields['item'].queryset = self.fields['item'].queryset.filter(pk=help_request.preferred_item_id)
             self.fields['item'].initial = help_request.preferred_item_id
 
 
@@ -123,7 +231,7 @@ class ReservationCancelForm(ReasonForm):
 class TransferForm(forms.Form):
     transferred_at = forms.DateTimeField(label='Фактические дата и время передачи', widget=forms.DateTimeInput(attrs={'type': 'datetime-local'}, format='%Y-%m-%dT%H:%M'), initial=timezone.localtime)
     note = forms.CharField(label='Как подтверждено получение', max_length=1500, widget=forms.Textarea(attrs={'rows': 4}), help_text='Например: получатель лично подтвердил выдачу координатору по телефону.')
-    confirmed = forms.BooleanField(label='Подтверждаю, что вещь фактически получена, а не только согласована к передаче')
+    confirmed = forms.BooleanField(label='Подтверждаю, что вещь фактически получена, а не только отмечена к передаче')
 
 
 class TransferReversalForm(ReasonForm):
@@ -153,7 +261,13 @@ class VolunteerForm(forms.ModelForm):
     class Meta:
         model = VolunteerApplication
         fields = ['availability', 'has_vehicle', 'description']
-        widgets = {'description': forms.Textarea(attrs={'rows': 4})}
+        widgets = {'description': forms.Textarea(attrs={'rows': 4}), 'availability': forms.TextInput(attrs={'placeholder': 'Например, по выходным после 12:00'})}
+        labels = {'availability': 'В какое время можете помогать'}
+        help_texts = {'availability': 'Напишите дни недели и время в свободной форме. Можно оставить пустым.'}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['availability'].required = False
 
 
 class VolunteerDecisionForm(ReasonForm):

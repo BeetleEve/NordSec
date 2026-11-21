@@ -18,6 +18,51 @@ class Timestamped(models.Model):
         abstract = True
 
 
+class Contact(models.Model):
+    name = models.CharField('Имя для связи', max_length=150)
+    phone = models.CharField('Телефон', max_length=30)
+
+    class Meta:
+        db_table = 'contacts'
+        db_table_comment = 'Контакты участников передачи: имя и телефон'
+        verbose_name = 'контакт'
+        verbose_name_plural = 'контакты'
+        constraints = [models.UniqueConstraint(fields=['name', 'phone'], name='unique_contact_details')]
+
+    def __str__(self):
+        return self.name
+
+
+class ContactRecord(Timestamped):
+    class Meta:
+        abstract = True
+
+    @property
+    def contact_name(self):
+        return getattr(self, '_contact_name', None) if hasattr(self, '_contact_name') else (self.contact.name if self.contact_id else '')
+
+    @contact_name.setter
+    def contact_name(self, value):
+        self._contact_name = value
+
+    @property
+    def contact_phone(self):
+        return getattr(self, '_contact_phone', None) if hasattr(self, '_contact_phone') else (self.contact.phone if self.contact_id else '')
+
+    @contact_phone.setter
+    def contact_phone(self, value):
+        self._contact_phone = value
+
+    def save(self, *args, **kwargs):
+        if not self.contact_id or hasattr(self, '_contact_name') or hasattr(self, '_contact_phone'):
+            self.contact, _ = Contact.objects.get_or_create(name=self.contact_name, phone=self.contact_phone)
+            if kwargs.get('update_fields') is not None:
+                kwargs['update_fields'] = set(kwargs['update_fields']) | {'contact'}
+        super().save(*args, **kwargs)
+        self.__dict__.pop('_contact_name', None)
+        self.__dict__.pop('_contact_phone', None)
+
+
 class Category(models.Model):
     name = models.CharField('Название', max_length=80, unique=True)
     slug = models.SlugField('Код', unique=True)
@@ -25,6 +70,8 @@ class Category(models.Model):
     order = models.PositiveSmallIntegerField('Порядок', default=0)
 
     class Meta:
+        db_table = 'categories'
+        db_table_comment = 'Категории вещей'
         ordering = ['order', 'name']
         verbose_name = 'категория'
         verbose_name_plural = 'категории'
@@ -33,7 +80,7 @@ class Category(models.Model):
         return self.name
 
 
-class Item(Timestamped):
+class Item(ContactRecord):
     class Status(models.TextChoices):
         REVIEW = 'review', 'На проверке'
         AVAILABLE = 'available', 'Доступна'
@@ -41,11 +88,18 @@ class Item(Timestamped):
         DELIVERED = 'delivered', 'Передана'
         WITHDRAWN = 'withdrawn', 'Снята с передачи'
         REJECTED = 'rejected', 'Не принята'
+        EXPIRED = 'expired', 'Метка устарела'
+
+    class Placement(models.TextChoices):
+        HOME = 'home', 'У владельца'
+        STREET = 'street', 'На улице'
 
     class Condition(models.TextChoices):
         NEW = 'new', 'Новая'
         EXCELLENT = 'excellent', 'Отличное'
         GOOD = 'good', 'Хорошее'
+        REPAIR = 'repair', 'Нужен ремонт / на запчасти'
+        UNKNOWN = 'unknown', 'Не проверено'
 
     class Location(models.TextChoices):
         DONOR = 'donor', 'У жертвователя'
@@ -55,15 +109,20 @@ class Item(Timestamped):
 
     donor = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name='Жертвователь', on_delete=models.PROTECT, null=True, blank=True, related_name='donated_items')
     registered_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='registered_items')
-    donor_name = models.CharField('Имя жертвователя', max_length=150)
-    contact_phone = models.CharField('Телефон для связи', max_length=30)
+    contact = models.ForeignKey(Contact, on_delete=models.PROTECT, related_name='items')
     title = models.CharField('Название вещи', max_length=140)
     category = models.ForeignKey(Category, verbose_name='Категория', on_delete=models.PROTECT, related_name='items')
-    description = models.TextField('Описание', max_length=3000)
-    condition = models.CharField('Состояние', max_length=20, choices=Condition.choices, default=Condition.GOOD)
+    description = models.TextField('Описание', max_length=3000, blank=True)
+    condition = models.CharField('Состояние', max_length=20, choices=Condition.choices, default=Condition.UNKNOWN, blank=True)
     size = models.CharField('Размер / габариты', max_length=80, blank=True)
     district = models.CharField('Район', max_length=20, choices=User.District.choices)
-    pickup_address = models.CharField('Точный адрес передачи', max_length=250)
+    pickup_address = models.CharField('Адрес', max_length=250, blank=True)
+    placement = models.CharField('Где находится вещь', max_length=10, choices=Placement.choices, default=Placement.HOME)
+    latitude = models.DecimalField('Широта', max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField('Долгота', max_digits=9, decimal_places=6, null=True, blank=True)
+    location_accuracy = models.PositiveIntegerField('Погрешность геолокации, м', null=True, blank=True)
+    expires_at = models.DateTimeField('Метка видна до', null=True, blank=True, db_index=True)
+    last_seen_at = models.DateTimeField('Последняя отметка на месте', null=True, blank=True)
     location = models.CharField('Местонахождение', max_length=20, choices=Location.choices, default=Location.DONOR)
     status = models.CharField('Статус', max_length=20, choices=Status.choices, default=Status.REVIEW, db_index=True)
     photo = models.ImageField('Фото', upload_to=photo_path, blank=True)
@@ -73,9 +132,14 @@ class Item(Timestamped):
     reviewed_at = models.DateTimeField(null=True, blank=True)
     accepted_at = models.DateTimeField('Дата принятия на учёт', null=True, blank=True, db_index=True)
 
+    donor_name = property(lambda self: self.contact_name, lambda self, value: setattr(self, 'contact_name', value))
+
     class Meta:
+        db_table = 'items'
+        db_table_comment = 'Объявления о вещах'
         ordering = ['-created_at']
-        indexes = [models.Index(fields=['status', 'category', 'district'], name='item_catalog_idx')]
+        indexes = [models.Index(fields=['status', 'category', 'district'], name='item_catalog_idx'), models.Index(fields=['placement', 'expires_at'], name='item_map_lifetime_idx')]
+        constraints = [models.CheckConstraint(condition=(Q(latitude__isnull=True, longitude__isnull=True) | Q(latitude__isnull=False, longitude__isnull=False, latitude__gte=-90, latitude__lte=90, longitude__gte=-180, longitude__lte=180)), name='valid_item_coordinates')]
         verbose_name = 'вещь'
         verbose_name_plural = 'вещи'
 
@@ -86,7 +150,7 @@ class Item(Timestamped):
         return self.title
 
 
-class HelpRequest(Timestamped):
+class HelpRequest(ContactRecord):
     class Status(models.TextChoices):
         NEW = 'new', 'На рассмотрении'
         CLARIFICATION = 'clarification', 'Нужно уточнение'
@@ -98,21 +162,42 @@ class HelpRequest(Timestamped):
 
     recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name='help_requests')
     registered_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='registered_requests')
-    recipient_name = models.CharField('Имя получателя', max_length=150)
-    contact_phone = models.CharField('Телефон для связи', max_length=30)
+    contact = models.ForeignKey(Contact, on_delete=models.PROTECT, related_name='requests')
+    unselected_category = models.ForeignKey(Category, on_delete=models.PROTECT, null=True, blank=True, related_name='+')
     preferred_item = models.ForeignKey(Item, verbose_name='Выбранная вещь', on_delete=models.PROTECT, null=True, blank=True, related_name='requests')
-    category = models.ForeignKey(Category, verbose_name='Категория', on_delete=models.PROTECT)
     need = models.TextField('Какая помощь нужна', max_length=3000)
     district = models.CharField('Район', max_length=20, choices=User.District.choices)
-    delivery_address = models.CharField('Адрес для согласования передачи', max_length=250, blank=True)
+    delivery_address = models.CharField('Адрес для обсуждения передачи', max_length=250, blank=True)
     needs_delivery = models.BooleanField('Нужна помощь с доставкой', default=False)
     status = models.CharField('Статус', max_length=20, choices=Status.choices, default=Status.NEW, db_index=True)
     coordinator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name='assigned_requests')
     decision_reason = models.TextField('Ответ получателю', max_length=1500, blank=True)
     staff_note = models.TextField('Служебный комментарий', max_length=2000, blank=True)
 
+    recipient_name = property(lambda self: self.contact_name, lambda self, value: setattr(self, 'contact_name', value))
+
+    @property
+    def category(self):
+        return self.preferred_item.category if self.preferred_item_id else self.unselected_category
+
+    @category.setter
+    def category(self, value):
+        self.unselected_category = value
+
+    @property
+    def category_id(self):
+        return self.category.pk if self.category else None
+
+    def save(self, *args, **kwargs):
+        if self.preferred_item_id:
+            self.unselected_category = None
+        super().save(*args, **kwargs)
+
     class Meta:
+        db_table = 'requests'
+        db_table_comment = 'Заявки на получение вещей'
         ordering = ['-created_at']
+        constraints = [models.CheckConstraint(condition=(Q(preferred_item__isnull=False, unselected_category__isnull=True) | Q(preferred_item__isnull=True, unselected_category__isnull=False)), name='request_one_category_source')]
         verbose_name = 'обращение'
         verbose_name_plural = 'обращения'
 
@@ -141,6 +226,8 @@ class Reservation(Timestamped):
     overdue_notified = models.BooleanField(default=False)
 
     class Meta:
+        db_table = 'reservations'
+        db_table_comment = 'Назначенные резервы вещей'
         ordering = ['-created_at']
         constraints = [
             models.UniqueConstraint(fields=['item'], condition=Q(status='active'), name='one_active_reservation_per_item'),
@@ -160,14 +247,26 @@ class VolunteerTask(Timestamped):
     volunteer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name='volunteer_tasks')
     title = models.CharField('Поручение', max_length=160)
     description = models.TextField('Что нужно сделать', max_length=2000)
-    district = models.CharField('Район', max_length=20, choices=User.District.choices)
     pickup_address = models.CharField('Откуда забрать', max_length=250)
     dropoff_address = models.CharField('Куда доставить', max_length=250)
-    scheduled_at = models.DateTimeField('Согласованное время')
+    scheduled_at = models.DateTimeField('Назначенное время')
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN, db_index=True)
     result_note = models.TextField('Результат / причина отказа', max_length=1500, blank=True)
 
+    @property
+    def district(self):
+        return self.reservation.item.district
+
+    @district.setter
+    def district(self, value):
+        pass  # Compatibility for imported older task records; the source is the item.
+
+    def get_district_display(self):
+        return self.reservation.item.get_district_display()
+
     class Meta:
+        db_table = 'delivery_tasks'
+        db_table_comment = 'Поручения волонтёрам по доставке'
         ordering = ['scheduled_at']
         verbose_name = 'поручение'
         verbose_name_plural = 'поручения'
@@ -187,6 +286,8 @@ class Transfer(models.Model):
     reversal_reason = models.TextField(max_length=1500, blank=True)
 
     class Meta:
+        db_table = 'transfers'
+        db_table_comment = 'Подтверждения фактической передачи'
         ordering = ['-transferred_at']
         verbose_name = 'передача'
         verbose_name_plural = 'передачи'
@@ -201,6 +302,8 @@ class Notification(models.Model):
     read_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
+        db_table = 'notifications'
+        db_table_comment = 'Уведомления пользователей'
         ordering = ['-created_at']
 
 
@@ -209,6 +312,8 @@ class Favorite(models.Model):
     item = models.ForeignKey(Item, on_delete=models.CASCADE)
 
     class Meta:
+        db_table = 'favorites'
+        db_table_comment = 'Избранные вещи пользователей'
         constraints = [models.UniqueConstraint(fields=['user', 'item'], name='unique_favorite')]
 
 
@@ -223,6 +328,8 @@ class AuditLog(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
+        db_table = 'activity_log'
+        db_table_comment = 'История действий участников'
         ordering = ['-created_at']
         verbose_name = 'событие'
         verbose_name_plural = 'журнал событий'
@@ -242,6 +349,31 @@ class VolunteerApplication(Timestamped):
     decision_reason = models.TextField(max_length=1500, blank=True)
 
 
+    class Meta:
+        db_table = 'volunteer_applications'
+        db_table_comment = 'Заявки на участие в волонтёрской работе'
+
 class LoginAttempt(models.Model):
     key = models.CharField(max_length=64, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = 'access_attempts'
+        db_table_comment = 'Ограничение частых запросов входа'
+
+
+class ItemSignal(models.Model):
+    class Kind(models.TextChoices):
+        PRESENT = 'present', 'Ещё на месте'
+        MISSING = 'missing', 'Уже нет'
+        UNSAFE = 'unsafe', 'Подозрительная отметка'
+
+    item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name='signals')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    kind = models.CharField('Отметка', max_length=10, choices=Kind.choices)
+    created_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'item_signals'
+        db_table_comment = 'Сообщения пользователей о наличии вещей и подозрительных отметках'
+        constraints = [models.UniqueConstraint(fields=['item', 'user'], name='one_signal_per_person')]

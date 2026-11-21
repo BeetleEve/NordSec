@@ -6,7 +6,7 @@ from apps.aid.models import Category, Item, HelpRequest
 class AidCase(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.coordinator = User.objects.create_user('coord-test', password='Example-test-8102', role='coordinator', first_name='Координатор')
+        cls.coordinator = User.objects.create_user('coord-test', password='Example-test-8102', role='moderator', first_name='Координатор')
         cls.donor = User.objects.create_user('donor-test', password='Example-test-8102', first_name='Жертвователь', phone='+7 900 000-00-01')
         cls.recipient = User.objects.create_user('recipient-test', password='Example-test-8102', first_name='Получатель', phone='+7 900 000-00-02')
         cls.other = User.objects.create_user('other-test', password='Example-test-8102')

@@ -15,7 +15,7 @@ class ConcurrentReservationTests(TransactionTestCase):
     def test_two_coordinators_racing_for_one_item(self):
         if connection.vendor != 'postgresql':
             self.skipTest('Нужен PostgreSQL для проверки блокировок.')
-        coordinators=[User.objects.create_user(f'coord-{i}',role='coordinator') for i in range(2)]
+        coordinators=[User.objects.create_user(f'coord-{i}',role='moderator') for i in range(2)]
         donor=User.objects.create_user('donor-concurrent')
         recipients=[User.objects.create_user(f'recipient-{i}') for i in range(2)]
         category,_=Category.objects.get_or_create(slug='clothes',defaults={'name':'Одежда'})

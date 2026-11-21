@@ -11,3 +11,5 @@ backups/
 .coverage
 htmlcov/
 main.pycharm-original.py
+
+.taste-skill/

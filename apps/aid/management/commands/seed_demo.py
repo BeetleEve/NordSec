@@ -27,7 +27,7 @@ class Command(BaseCommand):
             raise CommandError('Демонстрационные логины уже заняты. Используйте отдельную пустую базу.')
         password = secrets.token_urlsafe(12)
         with transaction.atomic():
-            coordinator = User.objects.create_user('coordinator', password=password, first_name='Анна', last_name='Координатор', role=User.Role.COORDINATOR, phone='+7 900 000-00-01', consent_at=timezone.now())
+            coordinator = User.objects.create_user('coordinator', password=password, first_name='Анна', last_name='Координатор', role=User.Role.MODERATOR, phone='+7 900 000-00-01', consent_at=timezone.now())
             volunteer = User.objects.create_user('volunteer', password=password, first_name='Михаил', last_name='Волонтёр', role=User.Role.VOLUNTEER, phone='+7 900 000-00-02', consent_at=timezone.now())
             donor = User.objects.create_user('donor', password=password, first_name='Елена', last_name='Жертвователь', phone='+7 900 000-00-03', consent_at=timezone.now())
             recipient = User.objects.create_user('recipient', password=password, first_name='Мария', last_name='Получатель', phone='+7 900 000-00-04', consent_at=timezone.now())

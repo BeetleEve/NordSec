@@ -18,6 +18,7 @@ INSTALLED_APPS = [
     'apps.accounts.apps.AccountsConfig', 'apps.aid.apps.AidConfig',
 ]
 MIDDLEWARE = [
+    'apps.aid.middleware.RequestAuditMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -82,15 +83,39 @@ X_FRAME_OPTIONS = 'DENY'
 DATA_UPLOAD_MAX_MEMORY_SIZE = 7 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 NORDSEC_DEMO = flag('NORDSEC_DEMO')
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend' if DEBUG else 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'localhost')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = flag('EMAIL_USE_TLS', True)
+EMAIL_USE_SSL = flag('EMAIL_USE_SSL', False)
+EMAIL_TIMEOUT = 10
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'NordSec <noreply@localhost>')
+PASSWORD_RESET_TIMEOUT = 3600
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_SSL_REDIRECT = True
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+REQUEST_LOG_DIR = BASE_DIR / '.runtime' / 'logs'
+REQUEST_LOG_DIR.mkdir(parents=True, exist_ok=True)
 LOGGING = {
     'version': 1, 'disable_existing_loggers': False,
-    'handlers': {'console': {'class': 'logging.StreamHandler'}},
+    'handlers': {
+        'console': {'class': 'logging.StreamHandler'},
+        'request_audit': {'class': 'logging.handlers.RotatingFileHandler', 'filename': str(REQUEST_LOG_DIR / 'requests.jsonl'), 'maxBytes': 10_000_000, 'backupCount': 10, 'encoding': 'utf-8'},
+    },
+    'loggers': {'nordsec.requests': {'handlers': ['request_audit'], 'level': 'INFO', 'propagate': False}},
     'root': {'handlers': ['console'], 'level': 'INFO'},
+}
+
+MAP_TILE_URL = os.environ.get('MAP_TILE_URL', '/map/tiles/{z}/{x}/{y}.png')
+MAP_TILE_UPSTREAM_URL = os.environ.get('MAP_TILE_UPSTREAM_URL', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png')
+MAP_GEOCODER_URL = os.environ.get('MAP_GEOCODER_URL', 'https://nominatim.openstreetmap.org/search')
+CACHES = {
+    'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'},
+    'map_tiles': {'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache', 'LOCATION': str(BASE_DIR / '.runtime' / 'map-tiles'), 'TIMEOUT': 604800, 'OPTIONS': {'MAX_ENTRIES': 20000}},
+    'geocoding': {'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache', 'LOCATION': str(BASE_DIR / '.runtime' / 'geocoding-cache')},
 }

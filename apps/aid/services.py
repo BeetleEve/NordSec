@@ -15,7 +15,7 @@ from .models import (Item, HelpRequest, Reservation, VolunteerTask, Transfer,
 
 def require_coordinator(actor):
     if not actor.is_authenticated or not actor.is_coordinator:
-        raise PermissionDenied('Эта операция доступна координатору.')
+        raise PermissionDenied('Эта операция доступна модератору.')
 
 
 def audit(actor, obj, action, before=None, note=''):
@@ -32,15 +32,18 @@ def notify(user, title, message, url=''):
 
 def notify_coordinators(title, message, url=''):
     recipients = User.objects.filter(is_active=True).filter(
-        Q(role=User.Role.COORDINATOR) | Q(is_superuser=True))
+        Q(role=User.Role.MODERATOR) | Q(is_superuser=True))
     Notification.objects.bulk_create([Notification(recipient=u, title=title, message=message, url=url) for u in recipients])
 
 
 @transaction.atomic
 def submit_item(actor, form, on_behalf=False):
+    if Item.objects.filter(registered_by=actor, created_at__gte=timezone.now()-timedelta(minutes=1)).count() >= 5:
+        raise ValidationError('Слишком много новых объявлений. Подождите минуту.')
     obj = form.save(commit=False)
     obj.registered_by = actor
-    obj.status = Item.Status.REVIEW
+    from .moderation import inspect_listing
+    flags = inspect_listing(obj)
     obj.location = Item.Location.DONOR
     if on_behalf:
         require_coordinator(actor)
@@ -48,8 +51,9 @@ def submit_item(actor, form, on_behalf=False):
     else:
         obj.donor = actor
     obj.save()
-    audit(actor, obj, 'Предложение зарегистрировано')
-    notify_coordinators('Новое предложение вещи', obj.title, obj.get_absolute_url())
+    audit(actor, obj, 'Объявление создано')
+    if flags:
+        notify_coordinators('Объявление на проверку', obj.title, obj.get_absolute_url())
     return obj
 
 
@@ -58,7 +62,7 @@ def edit_item(actor, item_id, form):
     obj = Item.objects.select_for_update().get(pk=item_id)
     if not actor.is_coordinator and obj.donor_id != actor.pk:
         raise PermissionDenied
-    if obj.status not in (Item.Status.REVIEW, Item.Status.REJECTED):
+    if obj.status not in (Item.Status.REVIEW, Item.Status.REJECTED, Item.Status.AVAILABLE):
         raise ValidationError('Изменить можно предложение на проверке или отклонённое предложение.')
     previous = {name: str(getattr(obj, name)) for name in ['status', *form.Meta.fields]}
     for name in form.Meta.fields:
@@ -67,13 +71,10 @@ def edit_item(actor, item_id, form):
             if name == 'photo' and value is False:
                 value = ''
             setattr(obj, name, value)
-    obj.status = Item.Status.REVIEW
-    obj.review_reason = ''
-    obj.reviewed_at = None
-    obj.reviewed_by = None
-    obj.accepted_at = None
+    from .moderation import inspect_listing
+    inspect_listing(obj)
     obj.save()
-    audit(actor, obj, 'Предложение уточнено', previous)
+    audit(actor, obj, 'Объявление отредактировано', previous)
     return obj
 
 
@@ -89,6 +90,9 @@ def review_item(actor, item_id, action, reason='', location=None):
         raise ValidationError('Укажите причину отказа.')
     previous = {'status': item.status, 'location': item.location}
     if action == 'approve':
+        if item.placement == 'street' and item.expires_at and item.expires_at <= timezone.now():
+            raise ValidationError('Отметка на улице устарела. Для публикации нужно новое объявление с актуальным фото.')
+        location = location or item.location
         if location not in (Item.Location.DONOR, Item.Location.FUND):
             raise ValidationError('Укажите подтверждённое местонахождение вещи.')
         item.status = Item.Status.AVAILABLE
@@ -100,8 +104,8 @@ def review_item(actor, item_id, action, reason='', location=None):
     item.reviewed_by = actor
     item.reviewed_at = timezone.now()
     item.save()
-    audit(actor, item, 'Вещь принята' if action == 'approve' else 'Предложение отклонено', previous, reason)
-    notify(item.donor, 'Предложение рассмотрено', f'{item.title}: {item.get_status_display()}. {reason}', item.get_absolute_url())
+    audit(actor, item, 'Публикация разрешена' if action == 'approve' else 'Объявление отклонено', previous, reason)
+    notify(item.donor, 'Объявление проверено', f'{item.title}: {item.get_status_display()}. {reason}', item.get_absolute_url())
     return item
 
 
@@ -111,7 +115,7 @@ def withdraw_item(actor, item_id, reason):
     if not actor.is_coordinator and item.donor_id != actor.pk:
         raise PermissionDenied
     if item.status not in (Item.Status.REVIEW, Item.Status.AVAILABLE, Item.Status.REJECTED):
-        raise ValidationError('Сначала нужно завершить или отменить действующий резерв через координатора.')
+        raise ValidationError('Сначала нужно завершить или отменить действующий резерв через модератора.')
     previous = {'status': item.status}
     item.status = Item.Status.WITHDRAWN
     item.save(update_fields=['status', 'updated_at'])
@@ -121,6 +125,8 @@ def withdraw_item(actor, item_id, reason):
 
 @transaction.atomic
 def submit_request(actor, form, preferred_item=None, on_behalf=False):
+    if not on_behalf and preferred_item is None:
+        raise ValidationError('Выберите вещь в каталоге, чтобы отправить заявку.')
     obj = form.save(commit=False)
     obj.registered_by = actor
     if on_behalf:
@@ -131,7 +137,7 @@ def submit_request(actor, form, preferred_item=None, on_behalf=False):
     if preferred_item:
         item = Item.objects.select_for_update().get(pk=preferred_item.pk)
         if item.status != Item.Status.AVAILABLE:
-            raise ValidationError('Вещь уже недоступна. Можно оставить общее обращение по категории.')
+            raise ValidationError('Вещь уже недоступна. Выберите другую вещь в каталоге.')
         if item.donor_id == actor.pk:
             raise ValidationError('Нельзя подать обращение на собственную вещь.')
         obj.preferred_item = item
@@ -143,6 +149,24 @@ def submit_request(actor, form, preferred_item=None, on_behalf=False):
     obj.save()
     audit(actor, obj, 'Обращение зарегистрировано')
     notify_coordinators('Новое обращение', f'Обращение №{obj.pk}', obj.get_absolute_url())
+    return obj
+
+
+@transaction.atomic
+def edit_request(actor, request_id, form):
+    obj = HelpRequest.objects.select_for_update().get(pk=request_id)
+    if obj.recipient_id != actor.pk:
+        raise PermissionDenied
+    if obj.status not in (HelpRequest.Status.NEW, HelpRequest.Status.CLARIFICATION, HelpRequest.Status.REJECTED):
+        raise ValidationError('Обращение уже назначено. Для изменений свяжитесь с модератором.')
+    before = {name: str(getattr(obj, name)) for name in ['status', *form.Meta.fields]}
+    for name in form.Meta.fields:
+        setattr(obj, name, form.cleaned_data[name])
+    obj.status = HelpRequest.Status.NEW
+    obj.decision_reason = ''
+    obj.save()
+    audit(actor, obj, 'Получатель изменил обращение', before)
+    notify_coordinators('Обращение изменено', f'№{obj.pk}: проверьте обновлённые данные.', obj.get_absolute_url())
     return obj
 
 
@@ -196,12 +220,14 @@ def reserve(actor, request_id, item_id, expires_at, meeting_at=None, meeting_not
     obj = HelpRequest.objects.select_for_update().get(pk=request_id)
     if item.status != Item.Status.AVAILABLE or obj.status != HelpRequest.Status.APPROVED:
         raise ValidationError('Вещь недоступна или обращение ещё не одобрено. Обновите страницу.')
+    if obj.preferred_item_id and obj.preferred_item_id != item.pk:
+        raise ValidationError('Зарезервировать можно только выбранную в заявке вещь.')
     if item.category_id != obj.category_id:
         raise ValidationError('Категория вещи должна соответствовать обращению.')
     if item.donor_id is not None and item.donor_id == obj.recipient_id:
         raise ValidationError('Жертвователь не может быть получателем собственной вещи.')
     if Reservation.objects.filter(item=item, status=Reservation.Status.ACTIVE).exists():
-        raise ValidationError('Вещь уже зарезервирована другим координатором.')
+        raise ValidationError('Вещь уже зарезервирована другим модератором.')
     if Reservation.objects.filter(request=obj, status=Reservation.Status.ACTIVE).exists():
         raise ValidationError('Для обращения уже есть действующий резерв.')
     result = Reservation.objects.create(item=item, request=obj, created_by=actor, expires_at=expires_at, meeting_at=meeting_at, meeting_note=meeting_note)
@@ -305,7 +331,6 @@ def create_task(actor, reservation_id, form):
         raise ValidationError('Время доставки должно быть до окончания резерва.')
     task.reservation = reservation
     task.status = VolunteerTask.Status.OPEN
-    task.district = item.district
     task.save()
     audit(actor, task, 'Создано поручение')
     return task
@@ -325,7 +350,7 @@ def task_action(actor, task_id, action, note=''):
         if task.status != VolunteerTask.Status.OPEN or task.volunteer_id:
             raise ValidationError('Поручение уже принято. Обновите страницу.')
         if reservation.expires_at <= timezone.now():
-            raise ValidationError('Срок резерва истёк. Свяжитесь с координатором.')
+            raise ValidationError('Срок резерва истёк. Свяжитесь с модератором.')
         task.volunteer = actor
         task.status = VolunteerTask.Status.ACCEPTED
     else:
@@ -333,7 +358,7 @@ def task_action(actor, task_id, action, note=''):
             raise PermissionDenied
         if action == 'decline':
             if task.status != VolunteerTask.Status.ACCEPTED:
-                raise ValidationError('После получения вещи отмена возможна только через координатора с фиксацией возврата.')
+                raise ValidationError('После получения вещи отмена возможна только через модератора с фиксацией возврата.')
             if not note.strip():
                 raise ValidationError('Укажите причину отказа.')
             task.volunteer = None
@@ -368,7 +393,7 @@ def complete_transfer(actor, reservation_id, transferred_at, note):
     if reservation.status != Reservation.Status.ACTIVE:
         raise ValidationError('Передача уже подтверждена или резерв закрыт.')
     if reservation.expires_at <= timezone.now() and item.location not in (Item.Location.TRANSIT, Item.Location.RECIPIENT):
-        raise ValidationError('Срок резерва истёк. Сначала закройте резерв и согласуйте новый срок передачи.')
+        raise ValidationError('Срок резерва истёк. Сначала закройте резерв и обсудите новый срок передачи.')
     # Browser datetime controls have minute precision. A confirmation made in
     # the reservation's first minute must remain valid after that truncation.
     if transferred_at > timezone.now() or transferred_at < reservation.created_at.replace(second=0, microsecond=0):
@@ -377,7 +402,7 @@ def complete_transfer(actor, reservation_id, transferred_at, note):
         raise ValidationError('Укажите основание подтверждения получения.')
     task = VolunteerTask.objects.select_for_update().filter(reservation=reservation).first()
     if task and task.status != VolunteerTask.Status.DELIVERED:
-        raise ValidationError('Дождитесь отметки волонтёра о доставке либо отмените поручение и согласуйте прямую передачу.')
+        raise ValidationError('Дождитесь отметки волонтёра о доставке либо отмените поручение и обсудите прямую передачу.')
     result = Transfer.objects.create(reservation=reservation, confirmed_by=actor, transferred_at=transferred_at, confirmation_note=note)
     reservation.status = Reservation.Status.FULFILLED
     reservation.save(update_fields=['status', 'updated_at'])
@@ -466,6 +491,29 @@ def expire_reservations():
                     notify_coordinators('Просроченная передача требует проверки', f'{item.title}, обращение №{obj.pk}. Резерв сохранён: вещь уже перемещена.', obj.get_absolute_url())
                     audit(None, reservation, 'Просрочка: ожидается проверка местонахождения')
                 continue
-            _cancel_locked(None, item, obj, reservation, 'Истёк согласованный срок резерва.', expired=True)
+            _cancel_locked(None, item, obj, reservation, 'Истёк назначенный срок резерва.', expired=True)
             released += 1
     return released
+
+
+@transaction.atomic
+def signal_item(actor, item_id, kind):
+    from .models import ItemSignal
+    if not actor.is_authenticated:
+        raise PermissionDenied
+    if kind != ItemSignal.Kind.UNSAFE:
+        raise ValidationError('Неизвестная отметка.')
+    obj = Item.objects.select_for_update().get(pk=item_id)
+    if obj.status != Item.Status.AVAILABLE or (obj.expires_at and obj.expires_at <= timezone.now()):
+        raise ValidationError('Это объявление уже закрыто.')
+    previous = ItemSignal.objects.filter(item=obj, user=actor).first()
+    if previous and previous.kind == kind:
+        return obj
+    ItemSignal.objects.update_or_create(item=obj, user=actor, defaults={'kind': kind})
+    notify_coordinators('Жалоба на отметку', f'Проверьте объявление №{obj.pk}.', obj.get_absolute_url())
+    if actor.is_moderator or obj.signals.filter(kind=kind).count() >= 2:
+        obj.status = Item.Status.REVIEW
+        obj.review_reason = 'Сообщения пользователей о подозрительной отметке.'
+        obj.save(update_fields=['status', 'review_reason', 'updated_at'])
+    audit(actor, obj, 'Жалоба на объявление', note=kind)
+    return obj

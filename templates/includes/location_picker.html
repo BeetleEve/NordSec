@@ -1,0 +1,9 @@
+{{ map_district_areas|json_script:'map-district-areas' }}
+<div class="location-picker" data-location-picker data-editing="{% if form.instance.pk or form.is_bound %}true{% else %}false{% endif %}" data-has-photo="{% if form.instance.photo %}true{% else %}false{% endif %}" data-tile-url="{{ map_tile_url }}" data-search-url="{% url 'map_address' %}">
+ <div class="map-toolbar"><button class="button btn button-outline" type="button" data-locate>Обновить моё местоположение</button></div>
+ <p class="field-help">Поиск отправляет введённую улицу в OpenStreetMap. Не вводите номер квартиры или другие личные данные. <a href="https://operations.osmfoundation.org/policies/nominatim/" target="_blank" rel="noopener">Правила поиска адресов</a>. Можно поставить точку вручную.</p>
+ <div data-address-results class="address-results"></div>
+ <div class="location-map" data-map-canvas aria-label="Выбор места вещи на карте"></div>
+ <p class="map-status" data-map-status role="status" aria-live="polite">Определяем местоположение. Если браузер спросит разрешение, решение за вами.</p>
+ <p class="field-help">Нажмите на карту или передвиньте метку. Для вещи на улице точка публичная, для вещи у владельца на общей карте отображается приблизительное место.</p>
+</div>

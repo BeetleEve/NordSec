@@ -40,60 +40,25 @@ class BrowserFormWorkflowTests(AidCase):
         }).status_code, 302)
         self.assertEqual(Transfer.objects.count(), 1)
 
-    def test_proposal_to_report_through_post_forms(self):
+    def test_owner_listing_to_direct_contact_through_post_forms(self):
         self.client.force_login(self.donor)
         response = self.client.post(reverse('item_create'), {
-            'title': 'Куртка из формы', 'category': self.category.pk,
+            'placement': 'home', 'title': 'Куртка из формы', 'category': self.category.pk,
             'description': 'Чистая зимняя куртка без повреждений.', 'condition': 'good',
             'size': 'M', 'district': 'central', 'pickup_address': 'Тестовый адрес А',
-            'donor_name': 'Жертвователь', 'contact_phone': '+79000000000',
+            'donor_name': 'Автор', 'contact_phone': '+79000000000',
         })
         self.assertEqual(response.status_code, 302)
         item = Item.objects.get(title='Куртка из формы')
-        self.assertEqual(item.status, Item.Status.REVIEW)
-
-        self.client.force_login(self.coordinator)
-        response = self.client.post(reverse('item_review', args=[item.pk]), {
-            'action': 'approve', 'location': 'fund', 'reason': 'Состояние проверено.',
-        })
-        self.assertEqual(response.status_code, 302)
-        item.refresh_from_db()
         self.assertEqual(item.status, Item.Status.AVAILABLE)
-
+        self.client.logout()
+        response = self.client.get(item.get_absolute_url())
+        self.assertNotContains(response, '+79000000000')
+        self.assertNotContains(response, 'Тестовый адрес А')
         self.client.force_login(self.recipient)
-        response = self.client.post(reverse('request_create') + f'?item={item.pk}', {
-            'need': 'Нужна куртка размера M.', 'recipient_name': 'Получатель',
-            'contact_phone': '+79000000001', 'district': 'central', 'consent': 'on',
-        })
-        self.assertEqual(response.status_code, 302)
-        obj = HelpRequest.objects.get(preferred_item=item)
-
-        self.client.force_login(self.coordinator)
-        self.assertEqual(self.client.post(reverse('request_decide', args=[obj.pk]), {
-            'action': 'approve', 'reason': 'Обращение согласовано.',
-        }).status_code, 302)
-        response = self.client.post(reverse('request_reserve', args=[obj.pk]), {
-            'item': item.pk,
-            'expires_at': timezone.localtime(timezone.now() + timedelta(days=1)).strftime('%Y-%m-%dT%H:%M'),
-            'meeting_note': 'В пункте фонда.',
-        })
-        self.assertEqual(response.status_code, 302)
-        reservation = Reservation.objects.get(request=obj)
-        # Same minute as reservation creation, exactly as datetime-local submits.
-        response = self.client.post(reverse('transfer_complete', args=[reservation.pk]), {
-            'transferred_at': timezone.localtime().strftime('%Y-%m-%dT%H:%M'),
-            'note': 'Получатель подтвердил лично.', 'confirmed': 'on',
-        })
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(Transfer.objects.count(), 1)
-        obj.refresh_from_db()
-        self.assertEqual(obj.status, HelpRequest.Status.COMPLETED)
-        response = self.client.get(reverse('reports'))
-        self.assertEqual(response.context['transfer_count'], 1)
-        response = self.client.get(reverse('reports'), {
-            'start': timezone.localdate().isoformat(), 'end': timezone.localdate().isoformat(), 'export': 'csv',
-        })
-        self.assertContains(response, 'Куртка из формы')
+        response = self.client.get(reverse('item_contact', args=[item.pk]))
+        self.assertContains(response, '+79000000000')
+        self.assertFalse(HelpRequest.objects.exists())
 
     def test_invalid_selected_item_returns_404(self):
         self.client.force_login(self.recipient)
